@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 		
 	NSLog(@"\nI'm going to try and update a structure variable.\n");
 	
-	setPt((struct SWIGTYPE_TPoint*)getPtptr());
+	setPt((SWIGTYPE_TPoint*)getPtptr());
 	
 	NSLog(@"The new value is \n");
 	

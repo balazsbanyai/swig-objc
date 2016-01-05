@@ -5,7 +5,7 @@ int main(int argc,char *argv[ ])
 NSAutoreleasePool *pool =[[NSAutoreleasePool alloc]init];
 Foo *foo =[[Foo alloc]initWithA:5];
 Bar *bar =[[Bar alloc]initWithCi:foo];
-	assert( foo != bar);
+	assert( foo != (Foo *)bar);
 NSLog(@"Test succeeds");
 [foo release];
 [bar release];

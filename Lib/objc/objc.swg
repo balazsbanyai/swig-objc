@@ -175,7 +175,6 @@
 		for (; i < length; ++i)
 			buffer[i] = [$input characterAtIndex: i];
     temp = ($*1_ltype)buffer;
-    if (!temp) return NULL;
   }
   $1 = &temp;
 }
