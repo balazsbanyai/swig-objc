@@ -721,6 +721,8 @@ public:
 
 	// Begin the first line of the function definition
 	Printv(wrapper->def, imrettype, " ", wname, "(", NIL);
+	
+	Setattr(n, "wrap:parms", parmlist);
 
 	// Make the param list with the intermediate parameter types 
 	makeParameterList(parmlist, wrapper);
@@ -734,16 +736,9 @@ public:
 	// Now write the function definition to the wrap_cpp
 	Printv(wrapper->def, " {", NIL);
 
-	// Emit all of the local variables for holding arguments
-	emit_parameter_variables(parmlist, wrapper);
-
 	// If any additional local variable needed, add them now
 	if (!is_void_return)
 		Wrapper_add_localv(wrapper, "imresult", imrettype, "imresult = 0", NIL);
-
-	// Attach the standard typemaps to the parameter list
-	emit_attach_parmmaps(parmlist, wrapper);
-	Setattr(n, "wrap:parms", parmlist);
 
 	// Now walk the function parameter list and generate code to get arguments.
 	marshalInputArgs(parmlist, wrapper);
@@ -850,7 +845,7 @@ public:
   /* Helper functions */
   bool substituteClassname(String *tm, SwigType *pt);
   void substituteClassnameVariable(String *tm, const char *classnamevariable, SwigType *type);
-  Parm *skipIgnoredArgs(Parm *p);
+  bool skipIgnoredArgs(Parm *p);
   void marshalInputArgs(ParmList *parmlist, Wrapper *wrapper);
   void makeParameterList(ParmList *parmlist, Wrapper *wrapper);
   void marshalOutput(Node *n, String *actioncode, Wrapper *wrapper);
@@ -934,7 +929,11 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
   int gencomma = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    p = skipIgnoredArgs(p);
+    /* Ignored parameters */
+    if (skipIgnoredArgs(p)) {
+	  continue;
+    }
+    
     SwigType *pt = Getattr(p, "type");
     
     String *objcparmtype = NewString("");
@@ -1093,7 +1092,11 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
   int gencomma = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    p = skipIgnoredArgs(p);
+    /* Ignored parameters */
+    if (skipIgnoredArgs(p)) {
+	  continue;
+    }
+    
     SwigType *pt = Getattr(p, "type");
     String *objcparmtype = NewString("");
 
@@ -1212,7 +1215,11 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
   int gencomma = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    p = skipIgnoredArgs(p);
+    /* Ignored parameters */
+    if (skipIgnoredArgs(p)) {
+	  continue;
+    }
+    
     SwigType *pt = Getattr(p, "type");
     String *objcparmtype = NewString("");
 
@@ -1594,11 +1601,12 @@ void OBJECTIVEC::substituteClassnameVariable(String *tm, const char *classnameva
  * skipIgnoredArgs()
  *
  * --------------------------------------------------------------------- */
-Parm *OBJECTIVEC::skipIgnoredArgs(Parm *p) {
-  while (checkAttribute(p, "tmap:in:numinputs", "0")) {
-    p = Getattr(p, "tmap:in:next");
+bool OBJECTIVEC::skipIgnoredArgs(Parm *p) {
+  if (checkAttribute(p, "tmap:in:numinputs", "0")) {
+	  p = Getattr(p, "tmap:in:next");
+	  return true;
   }
-  return p;
+  return false;
 }
 
 /* ---------------------------------------------------------------------
@@ -1614,7 +1622,11 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
   int i = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    p = skipIgnoredArgs(p);
+	/* Ignored parameters */
+    if (skipIgnoredArgs(p)) {
+	  continue;
+    }
+      
     SwigType *pt = Getattr(p, "type");
     
     String *arg = NewString("");
@@ -1641,6 +1653,12 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
 
 void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
 
+  /* Emit all of the local variables for holding arguments. */
+  emit_parameter_variables(parmlist, wrapper);
+
+  /* Attach the standard typemaps */
+  emit_attach_parmmaps(parmlist, wrapper);
+
   // Attach the non-standard typemaps to the parameter list
   Swig_typemap_attach_parms("imtype", parmlist, wrapper);
 
@@ -1650,7 +1668,12 @@ void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
   int gencomma = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    p = skipIgnoredArgs(p);
+  
+    /* Ignored parameters */
+    if (skipIgnoredArgs(p)) {
+	  continue;
+    }
+    
     SwigType *pt = Getattr(p, "type");
     
     String *imparmtype = NewString("");
