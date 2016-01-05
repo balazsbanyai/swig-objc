@@ -28,45 +28,44 @@
  *
  */
 %typemap(objcconstructor) SWIGTYPE %{
-	if((self = [super init])) {
-		void* cptr = $imcall;
-        swigCPtr = cptr;
-        swigCMemOwn = YES;
-	}
-	return self;
-%}
+  if((self = [super init])) {
+    void* cptr = $imcall;
+    swigCPtr = cptr;
+    swigCMemOwn = YES;
+  }
+  return self;%}
 
 %typemap(objcdestructor, methodname="dealloc", methodmodifiers="public") SWIGTYPE %{
   if (swigCPtr != NULL) {
     if (swigCMemOwn) {
-        $imcall;
-        swigCMemOwn = NO;
+      $imcall;
+      swigCMemOwn = NO;
     }
     swigCPtr = NULL;
   }
-  [super dealloc];
-%}
+  [super dealloc];%}
 
 // Proxy interface and implementation (for C++ class with no base class)
 %typemap(objcinterfacecode) SWIGTYPE %{ {
-	void *swigCPtr;
-	BOOL swigCMemOwn;
+  void *swigCPtr;
+  BOOL swigCMemOwn;
 }
 - (void *)getCptr;
 - (id)initWithCptr:(void *)cptr swigOwnCObject:(BOOL)ownCObject;
 %}
 
 %typemap(objcimplementationcode) SWIGTYPE %{
+
 - (void *)getCptr {
-	return swigCPtr;
+  return swigCPtr;
 }
 
 -(id)initWithCptr:(void *)cptr swigOwnCObject:(BOOL)ownCObject {
-	if((self = [super init])) {
-		swigCPtr = cptr;
-        swigCMemOwn = ownCObject;
-	}
-	return self;
+  if((self = [super init])) {
+    swigCPtr = cptr;
+    swigCMemOwn = ownCObject;
+  }
+  return self;
 }
 %}
 
@@ -77,16 +76,17 @@
 %}
 
 %typemap(objcimplementationcode_derived) SWIGTYPE %{
+
 - (void *)getCptr {
-	return swigCPtr;
+  return swigCPtr;
 }
 
 - (id)initWithCptr:(void *)cptr swigOwnCObject:(BOOL)ownCObject {
-	if((self = [super init])) {
-		swigCPtr = cptr;
-        swigCMemOwn = ownCObject;
-	}
-	return self;
+  if((self = [super init])) {
+    swigCPtr = cptr;
+    swigCMemOwn = ownCObject;
+  }
+  return self;
 }
 %}
 
@@ -95,29 +95,30 @@
  */
 
 %typemap(objctypeinterface) SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{ {
-	void *swigCPtr;
-	BOOL swigCMemOwn;
+  void *swigCPtr;
+  BOOL swigCMemOwn;
 }
 - (void *)getCptr;
 - (id)initWithCptr:(void *)cptr;
 %}
 
 %typemap(objctypeimplementation) SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
+
 - (void *)getCptr {
-	return swigCPtr;
+  return swigCPtr;
 }
 
 - (id)init {
-	if((self = [super init])) {
-		swigCPtr = 0;
-	}
-	return self;
+  if((self = [super init])) {
+    swigCPtr = 0;
+  }
+  return self;
 }
 
 - (id)initWithCptr:(void *) cptr{
-	if((self = [super init])) {
-		swigCPtr = cptr;
-	}
-	return self;
+  if((self = [super init])) {
+    swigCPtr = cptr;
+  }
+  return self;
 }
 %}

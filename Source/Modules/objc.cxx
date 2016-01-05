@@ -140,6 +140,8 @@ public:
 
 	  // Set typemap language (historical) 
 	  SWIG_typemap_lang("objc");
+	  
+	  allow_overloading();
   }
   
   /* ---------------------------------------------------------------------
@@ -687,6 +689,7 @@ public:
       
 	// Get some useful attributes of this function
 	String *symname = Getattr(n, "sym:name");
+	String *overloaded_name = getOverloadedName(n);
 	SwigType *type = Getattr(n, "type");
 	ParmList *parmlist = Getattr(n, "parms");
 	String *crettype = SwigType_str(type, 0);
@@ -697,11 +700,11 @@ public:
 	bool is_destructor = (Cmp(nodeType(n), "destructor") == 0);
 	bool is_constant = (Cmp(nodeType(n), "constant") == 0);
 
-	if (!Getattr(n, "sym:overloaded") && !addSymbol(Getattr(n, "sym:name"), n))
+	if (!Getattr(n, "sym:overloaded") && !addSymbol(symname, n))
 		return SWIG_ERROR;
 	
 	// Create the function's wrappered name
-	String *wname = Swig_name_wrapper(symname);
+	String *wname = Swig_name_wrapper(overloaded_name);
 
 	// Create the wrapper function object
 	Wrapper *wrapper = NewWrapper();
@@ -805,7 +808,9 @@ public:
 	// Tidy up
 	Delete(imrettype);
 	Delete(wname);
+	Delete(overloaded_name);
 	DelWrapper(wrapper);
+	
 	return SWIG_OK;
   }
   
@@ -814,6 +819,25 @@ public:
  * --------------------------------------------------------------------- */
   virtual int nativeWrapper(Node *n) {
   	return Language::nativeWrapper(n);
+  }
+
+  /* -----------------------------------------------------------------------------
+   * getOverloadedName()
+   * ----------------------------------------------------------------------------- */
+
+  String *getOverloadedName(Node *n) {
+
+    /* Although JNI functions are designed to handle overloaded Java functions,
+     * a Java long is used for all classes in the SWIG intermediary class.
+     * The intermediary class methods are thus mangled when overloaded to give
+     * a unique name. */
+    String *overloaded_name = NewStringf("%s", Getattr(n, "sym:name"));
+
+    if (Getattr(n, "sym:overloaded")) {
+      Printv(overloaded_name, Getattr(n, "sym:overname"), NIL);
+    }
+
+    return overloaded_name;
   }
 
   /* Proxy class code generators */
@@ -849,6 +873,7 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
 
   // Get some useful attributes of this function
   String *symname = Getattr(n, "sym:name");
+  String *overloaded_name = getOverloadedName(n);
   SwigType *type = Getattr(n, "type");
   ParmList *parmlist = Getattr(n, "parms");
   String *crettype = SwigType_str(type, 0);
@@ -887,8 +912,8 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
   } else {
     proxyfunctionname = NewString("Objc");
     // Capitalize the first letter
-    Putc(toupper((int) *Char(symname)), proxyfunctionname);
-    Printf(proxyfunctionname, "%s", Char(symname) + 1);
+    Putc(toupper((int) *Char(overloaded_name)), proxyfunctionname);
+    Printf(proxyfunctionname, "%s", Char(overloaded_name) + 1);
   }
 
   /* Write the proxy global function declaration and definition */
@@ -950,7 +975,7 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
   Printv(function_decl, ")", NIL);	// or 
   //Printv(function_decl, paramstring, ")", NIL);
 
-  Printv(function_defn, function_decl, "\n{\n", NIL);
+  Printv(function_defn, function_decl, " {\n", NIL);
   Printf(function_decl, ";");
 
   // End the call to the intermediate function
@@ -965,7 +990,7 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
     Swig_warning(WARN_OBJC_TYPEMAP_OBJCOUT_UNDEF, input_file, line_number, "No objcout typemap defined for %s\n", crettype);
   }
 
-  Printf(function_defn, " %s\n}\n", tm ? (const String *) tm : empty_string);
+  Printf(function_defn, "  %s\n}\n", tm ? (const String *) tm : empty_string);
 
   /* Write the function declaration to the proxy_h_code 
      and function definition to the proxy_mm_code */
@@ -978,6 +1003,8 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
     Printv(proxy_mm_code, function_defn, "\n", NIL);
   }
   //Delete(paramstring);
+  Delete(symname);
+  Delete(overloaded_name);
   Delete(proxyfunctionname);
   Delete(objcrettype);
   Delete(imcall);
@@ -1049,9 +1076,9 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
 
   // Begin the first line of the function declaration
   if (static_flag)
-    Printv(function_decl, "+(", objcrettype, ")", proxyfunctionname, NIL);
+    Printv(function_decl, "+ (", objcrettype, ")", proxyfunctionname, NIL);
   else
-    Printv(function_decl, "-(", objcrettype, ")", proxyfunctionname, NIL);
+    Printv(function_decl, "- (", objcrettype, ")", proxyfunctionname, NIL);
 
   // Prepare the call to intermediate function
   Printv(imcall, imfunctionname, "(", NIL);
@@ -1095,14 +1122,14 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
     // Add parameter to proxy function
     if (static_flag) {
       if (gencomma == 0)
-	Printf(function_decl, ": (%s)%s", objcparmtype, arg);
+		Printf(function_decl, ":(%s)%s", objcparmtype, arg);
       else if (gencomma >= 1)
-	Printf(function_decl, " %s: (%s)%s", arg, objcparmtype, arg);
+		Printf(function_decl, " %s:(%s)%s", arg, objcparmtype, arg);
     } else {
       if (gencomma == 1)
-	Printf(function_decl, ": (%s)%s", objcparmtype, arg);
+		Printf(function_decl, ":(%s)%s", objcparmtype, arg);
       else if (gencomma >= 2)
-	Printf(function_decl, " %s: (%s)%s", arg, objcparmtype, arg);
+		Printf(function_decl, " %s:(%s)%s", arg, objcparmtype, arg);
     }
     gencomma++;
 
@@ -1111,7 +1138,7 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
   }
 
   // First line of function definition
-  Printv(function_defn, function_decl, "\n{\n", NIL);
+  Printv(function_defn, function_decl, " {\n", NIL);
   Printf(function_decl, ";");
 
   // End the call to the intermediate function
@@ -1125,7 +1152,7 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
     Swig_warning(WARN_OBJC_TYPEMAP_OBJCOUT_UNDEF, input_file, line_number, "No objcout typemap defined for %s\n", crettype);
   }
 
-  Printf(function_defn, " %s\n}\n", tm ? (const String *) tm : empty_string);
+  Printf(function_defn, "  %s\n}\n", tm ? (const String *) tm : empty_string);
 
 
   /* Write the function declaration to the proxy_class_function_decls 
@@ -1170,7 +1197,7 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
   /* Write the proxy class constructor declaration and definition */
 
   // Begin the first line of the constructor
-  Printv(constructor_decl, "-(", objcrettype, ")", proxyfunctionname, NIL);
+  Printv(constructor_decl, "- (", objcrettype, ")", proxyfunctionname, NIL);
 
   // Prepare the call to intermediate function
   Printv(imcall, imfunctionname, "(", NIL);
@@ -1220,7 +1247,7 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
       Printf(constructor_decl, "%s:", (Char(arg) + 1));
     }
 
-    Printf(constructor_decl, " (%s)%s", objcparmtype, arg);
+    Printf(constructor_decl, "(%s)%s", objcparmtype, arg);
     gencomma++;
 
     Delete(arg);
@@ -1229,7 +1256,7 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
   }
 
   // First line of function definition
-  Printv(constructor_defn, constructor_decl, "\n{\n", NIL);
+  Printv(constructor_defn, constructor_decl, " {\n", NIL);
   Printf(constructor_decl, ";");
 
   // End the call to the intermediate function
@@ -1366,7 +1393,7 @@ void OBJECTIVEC::emitProxyClass(Node *n) {
 
   if (tm) {
     // Write the dealloc() method declaration for the proxy interface
-    Printv(destructor_decl, "\n", "-(void)", destructor_methodname, ";\n", NIL);
+    Printv(destructor_decl, "- (void)", destructor_methodname, ";", NIL);
 
     // And, the dealloc() method definition for the proxy implementation
     String *destructor_code = NewString("");
@@ -1380,7 +1407,7 @@ void OBJECTIVEC::emitProxyClass(Node *n) {
     }
 
     if (*Char(destructor_code)) {
-      Printv(destructor_defn, "\n", "-(void)", destructor_methodname, "{\n", destructor_code, "\n}\n", NIL);
+      Printv(destructor_defn, "- (void)", destructor_methodname, " {", destructor_code, "\n}\n", NIL);
     }
 
     Delete(destructor_code);
