@@ -285,6 +285,8 @@ public:
 
         Dump(proxy_class_defns_code, f_proxy_h);
         Printf(f_proxy_h, "\n");
+        Dump(proxy_class_enums_code, f_proxy_h);
+        Printf(f_proxy_h, "\n");
 		Dump(swigtypes_h_code, f_proxy_h);
 		Dump(proxy_h_code, f_proxy_h);
 		Printf(f_proxy_h, "\n#ifdef __cplusplus\n");
@@ -441,13 +443,11 @@ public:
     	if (!addSymbol(proxy_class_name, n))
       		return SWIG_ERROR;
 
-        Clear(proxy_class_imports);
     	Clear(proxy_class_imports);
     	Clear(proxy_class_function_decls);
     	Clear(proxy_class_function_defns);
     	Clear(proxy_global_function_decls);
     	Clear(proxy_global_function_defns);
-    	Clear(proxy_class_enums_code);
     	Clear(proxy_class_itfc_code);
     	Clear(proxy_class_impl_code);
     	Clear(destrcutor_call);
@@ -506,29 +506,29 @@ public:
   	if (proxy_flag) {
     	if (typemap_lookup_type) {
      		// Copy-paste the C/C++ enum as an Objective-C enum
-      		Printv(proxy_h_code, "enum ", enumname, " {\n", NIL);
+            Printv(proxy_class_enums_code, "typedef NS_ENUM(NSInteger, ", enumname, ") {\n", NIL);
     	} 
     	else {
       		// Handle anonymous enums.
-      		Printv(proxy_h_code, "\nenum {\n", NIL);
+      		Printv(proxy_class_enums_code, "\nenum {\n", NIL);
     	}
   	}
   	// Emit each enum item
   	Language::enumDeclaration(n);
-
+  	
   	if (!GetFlag(n, "nonempty")) {
-    	// Do not wrap empty enums;
-    	return SWIG_NOWRAP;
+    	// Default value for empty enums;
+    	Printv(proxy_class_enums_code,"  ", enumname, "None = 0", NIL);
   	}
 
   	if (proxy_flag) {
     	if (typemap_lookup_type) {
       	// Finish the enum declaration
-      	Printv(proxy_h_code, "\n};\n\n", NIL);
+      	Printv(proxy_class_enums_code, "\n};\n\n", NIL);
     	}
     	else {
       	// Handle anonymous enums.
-      	Printv(proxy_h_code, "\n};\n\n", NIL);
+      	Printv(proxy_class_enums_code, "\n};\n\n", NIL);
     	}
   	}
 
@@ -545,27 +545,46 @@ public:
 
   	Swig_require("enumvalueDeclaration", n, "*name", "?value", NIL);
   	String *symname = Getattr(n, "sym:name");
-  	String *value = Getattr(n, "enumvalue");
+  	String *value = Getattr(n, "feature:objc:constvalue");
   	Node *parent = parentNode(n);
   	Node *pparent = parentNode(parent);
   	String *enumname;
   	
-  	if (pparent && !Cmp(nodeType(pparent), "class")) {	// This is a nested enum, prefix the class name
-    	String *classname = Getattr(pparent, "sym:name");
-    	enumname = NewStringf("%s_%s", classname, symname);
-  	}
-  	else {
+  	if (pparent && !Cmp(nodeType(pparent), "class"))	// This is a nested enum, prefix the class name
+    	enumname = NewStringf("%s_%s", Getattr(pparent, "sym:name"), symname);
+  	else
     	enumname = Copy(symname);
-  	}
+
   	if (proxy_flag) {		// Emit the enum item
+  	  String *valuedecl = NewStringEmpty();
+  	  
     	if (!GetFlag(n, "firstenumitem"))
-      		Printf(proxy_h_code, ",\n");
+      		Printf(proxy_class_enums_code, ",\n");
       		
-    	Printf(proxy_h_code, "  %s", enumname);
-    	if (value) {
-      		value = Getattr(n, "enumvalue") ? Copy(Getattr(n, "enumvalue")) : Copy(Getattr(n, "enumvalueex"));
-      		Printf(proxy_h_code, " = %s", value);
+    	Printf(valuedecl, "  %s", enumname);
+    	  
+        // The %objcconst feature determines how the constant value is obtained
+    	if (!value && GetFlag(n, "feature:objc:const")) {
+    	
+    	  // Deal with enum values that are not int
+          int swigtype = SwigType_type(Getattr(n, "type"));
+          if (swigtype == T_BOOL) {
+            const char *val = Equal(Getattr(n, "enumvalue"), "true") ? "1" : "0";
+            Setattr(n, "enumvalue", val);
+          } else if (swigtype == T_CHAR) {
+            String *val = NewStringf("'%s'", Getattr(n, "enumvalue"));
+            Setattr(n, "enumvalue", val);
+            Delete(val);
+          }
+          value = Getattr(n, "enumvalue");// ? Copy(Getattr(n, "enumvalue")) : Copy(Getattr(n, "enumvalueex"));
     	}
+    	
+    	if (value)
+    	  Printf(valuedecl, " = %s", value);
+    	  
+    	Printf(proxy_class_enums_code, "  %s", valuedecl);
+    	
+    	Delete(valuedecl);
   	}
   	// Keep track that the currently processed enum has at least one value
 	SetFlag(parent, "nonempty");
@@ -1581,12 +1600,13 @@ void OBJECTIVEC::substituteClassnameVariable(String *tm, const char *classnameva
     Node *n = enumLookup(type);
     String *enum_name = Getattr(n, "sym:name");
     Node *p = parentNode(n);
+    
     if (p && !Cmp(nodeType(p), "class")) {
       // This is a nested enum.
       String *parent_name = Getattr(p, "sym:name");
-      type_name = NewStringf("enum %s_%s", parent_name, enum_name);
+      type_name = NewStringf("%s_%s", parent_name, enum_name);
     } else {
-      type_name = NewStringf("enum %s", enum_name);
+      type_name = Copy(enum_name);
     }
   } else {
     String *class_name = createProxyName(type);

@@ -500,17 +500,22 @@ struct Instances {
 
 // Repeated values
 #if defined(SWIGJAVA)
-%javaconst(1);
-// needed for typesafe and proper enums only
-%javaconst(0) ignoreA_three;
-%javaconst(0) ignoreA_thirteen;
+  %javaconst(1);
+  // needed for typesafe and proper enums only
+  %javaconst(0) ignoreA_three;
+  %javaconst(0) ignoreA_thirteen;
 #elif defined(SWIGCSHARP)
-// needed for typesafe enums only
-#ifdef SWIG_TEST_NOCSCONST
-  %csconst(0) ignoreA_three;
-  %csconst(0) ignoreA_thirteen;
-#endif
-%csconst(1);
+  // needed for typesafe enums only
+  #ifdef SWIG_TEST_NOCSCONST
+    %csconst(0) ignoreA_three;
+    %csconst(0) ignoreA_thirteen;
+  #endif
+  %csconst(1);
+#elif defined(SWIGOBJECTIVEC)
+  %objcconst(1);
+  // needed for typesafe and proper enums only
+  %objcconst(0) ignoreA_three;
+  %objcconst(0) ignoreA_thirteen;
 #endif
 
 %ignore ignoreA_one;
@@ -589,9 +594,11 @@ int globalDifferentTypesTest(int n) { return n; }
 %}
 
 #if defined(SWIGJAVA)
-%javaconst(0);
+  %javaconst(0);
 #elif defined(SWIGCSHARP)
-%csconst(0);
+  %csconst(0);
+#elif defined(SWIGOBJECTIVEC)
+  %objcconst(0);
 #endif
 
 %inline %{
