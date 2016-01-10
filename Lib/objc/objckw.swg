@@ -2,7 +2,7 @@
 #define OBJCKW_SWG_
 
 /* Warnings for ObjectiveC keywords */
-#define OBJCKW(x) %keywordwarn("'" `x` "' is an ObjectiveC keyword, renaming to '_"`x`"'",rename="_%s")  `x`
+#define OBJCKW(x) %keywordwarn("'" `x` "' is an objective-c keyword, renaming to '_"`x`"'",rename="_%s")  `x`
 
 OBJCKW(asm);
 OBJCKW(assign);
@@ -46,6 +46,7 @@ OBJCKW(release);
 OBJCKW(retain);
 OBJCKW(return);
 OBJCKW(SEL);
+OBJCKW(self);
 OBJCKW(short);
 OBJCKW(signed);
 OBJCKW(sizeof);

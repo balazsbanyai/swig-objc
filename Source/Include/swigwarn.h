@@ -314,6 +314,7 @@
 #define WARN_OBJC_MULTIPLE_INHERITANCE       904
 #define WARN_OBJC_INTERFACE_MOD              905
 #define WARN_OBJC_IMPLEMENTATION_MOD         906
+#define WARN_OBJC_DUPLICATE_DECL       		 907
 
 /* please leave 900-919 free for ObjectiveC */
 

@@ -5,7 +5,7 @@ int main(int argc,char* argv[])
 NSAutoreleasePool *pool = [[NSAutoreleasePool alloc]init];
 A *a =[[A alloc]initWithA:5];
 B *b =[[B alloc]initWithA:5];
-assert ([b get_a] != [b get_b]);
+assert ([b getA] != [b getB]);
 NSLog(@"Something Wrong");
 				
 [a release];

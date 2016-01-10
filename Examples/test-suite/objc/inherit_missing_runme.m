@@ -6,7 +6,7 @@ NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 SWIGTYPE_p_Foo *a=ObjcNew_Foo();
 Bar *b=[[Bar alloc]init];
 Spam *c=[[Spam alloc]init];
-NSString *t=ObjcDo_blah(a);
+NSString *t=ObjcDoBlah(a);
 assert([t isEqualToString:@"Foo::blah"]);
 
 t=[b blah];

@@ -4,7 +4,7 @@ int main(int argc,char* argv[])
 NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 XC *xc=[[XC alloc]init];
 Y *y=[[Y alloc]init];
-assert([y find:xc] == NO);
+assert([y findWithArg1:xc] == NO);
 
 [xc release];
 [y release];

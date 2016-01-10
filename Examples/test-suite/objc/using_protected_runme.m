@@ -5,7 +5,7 @@ int main(int argc,char *argv[])
 NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 FooBar *f=[[FooBar alloc]init];
 [f setX:3];
-assert([f blah:4] == 4);
+assert([f blahWithXx:4] == 4);
 
 [f release];
 [pool drain];

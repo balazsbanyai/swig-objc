@@ -5,7 +5,7 @@ int main(int argc,char* argv[])
 NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 Engine *e=[[Engine alloc]init];
 A *a=[[A alloc]init];
-assert([a write:e] == YES);
+assert([a writeWithArchive:e] == YES);
 
 [e release];
 [a release];

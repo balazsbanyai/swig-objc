@@ -3,7 +3,7 @@
 int main(int argc ,char *argv[])
 {
 NSAutoreleasePool *pool =[[NSAutoreleasePool alloc]init];
-Foo_ptr  *ptr =[Foo_ptr  getPtr];
+Foo_ptr  *ptr =[Foo_ptr getPtr];
 if ([ptr  getVal]  != 17)
 NSLog(@"Runtime test1 failed");
 

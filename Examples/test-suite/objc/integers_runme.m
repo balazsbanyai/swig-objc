@@ -5,16 +5,16 @@ int main(int argc,char* argv[])
 {
 NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 
-assert(ObjcSigned_char_identity(-3)   == -3);
-assert(ObjcUnsigned_char_identity(5)  == 5);
-assert(ObjcSigned_short_identity(-3)  == -3);
-assert(ObjcUnsigned_short_identity(5) == 5);
-assert(ObjcSigned_int_identity(-3)  == -3);
-assert(ObjcUnsigned_int_identity(5) == 5);
-assert(ObjcSigned_long_identity(-3)  == -3);
-assert(ObjcUnsigned_long_identity(5) == 5);
-assert(ObjcSigned_long_long_identity(-3)  == -3);
-assert(ObjcUnsigned_long_long_identity(5) == 5);
+assert(ObjcSignedCharIdentity(-3)   == -3);
+assert(ObjcUnsignedCharIdentity(5)  == 5);
+assert(ObjcSignedShortIdentity(-3)  == -3);
+assert(ObjcUnsignedShortIdentity(5) == 5);
+assert(ObjcSignedIntIdentity(-3)  == -3);
+assert(ObjcUnsignedIntIdentity(5) == 5);
+assert(ObjcSignedLongIdentity(-3)  == -3);
+assert(ObjcUnsignedLongIdentity(5) == 5);
+assert(ObjcSignedLongLongIdentity(-3)  == -3);
+assert(ObjcUnsignedLongLongIdentity(5) == 5);
 
 [pool drain];
 return 0;

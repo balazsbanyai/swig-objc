@@ -7,9 +7,9 @@ struct basic_string {
 };
 
 template<class T>
-struct Ptr {
-    Ptr(T *p = 0) : ptr(p) {}
-    ~Ptr() { delete ptr; }
+struct Pointer {
+    Pointer(T *p = 0) : ptr(p) {}
+    ~Pointer() { delete ptr; }
     T *operator->() const { return ptr; }
 private:
     T *ptr;
@@ -35,5 +35,5 @@ DiffImContainer<double>* create(int id, short xyz) {
 
 %template(BasicString)                     basic_string<char>;
 %template(DiffImContainer_D)               DiffImContainer<double>;
-%template(DiffImContainerPtr_D)            Ptr<DiffImContainer<double> >;
+%template(DiffImContainerPtr_D)            Pointer<DiffImContainer<double> >;
 

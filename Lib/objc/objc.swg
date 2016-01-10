@@ -285,20 +285,20 @@
 #ifdef __cplusplus
 %{
   temp = new $1_ltype((const $1_ltype &)$1); 
-  $result = (void*)temp;
+  $result = *(typeof($result)*)&temp;
 %}
 #else
 {
   $&1_ltype $1ptr = ($&1_ltype) malloc(sizeof($1_ltype));
   memmove($1ptr, &$1, sizeof($1_type));
   temp = $1ptr;
-  $result = (void*)temp;
+  $result = *(typeof($result)*)&temp;
 }
 #endif
 
 // Pointer objects are returned as void* in the ObjectiveC++ layer
 %typemap(out) SWIGTYPE *, SWIGTYPE & 
-%{ $result = (void*)$1; %}
+%{ $result = *(typeof($result)*)&$1; %}
 
 %typemap(out) SWIGTYPE [] %{ $result = $1; %}
 
@@ -311,10 +311,10 @@
 
 // Function pointers
 %typemap(out) SWIGTYPE ((*)(ANY))
-%{ $result = (void*)$1; %}
+%{ $result = *(typeof($result)*)&$1; %}
 
 %typemap(out) SWIGTYPE *&
-%{ $result = (void*)*$1; %} 
+%{ $result = *(typeof($result)*)&*$1; %} 
 
 /* 
  * OBJCTYPE TYPEMAPS: Represents the ObjectiveC(proxy) type corresponding to each ObjectiveC++ type in the intermediate(wrapper) layer. 
@@ -624,7 +624,9 @@
 %{ SWIG_ObjcThrowException(SWIG_ObjcRuntimeException, $1);
    return $null; %}
 
-
+/* Objective-C specific directives */
+#define %objcconst(flag)            %feature("objc:const","flag")
+#define %objcconstvalue(value)      %feature("objc:constvalue",value)
 #define %objcexception(exceptionclasses) %feature("except",throws=exceptionclasses)
 #define %noobjcexception            %feature("except","0",throws="")
 #define %clearobjcexception         %feature("except","",throws="")

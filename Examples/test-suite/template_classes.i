@@ -6,7 +6,7 @@
 %inline %{
 
 template <class T>
-class Point {
+class xPoint {
 public:
   T getX() {return x;}
 private:
@@ -16,20 +16,20 @@ private:
 template <class T>
 class RectangleTest {
 public:
-  Point<T>& getPoint() {return point;}
-  void setPoint(Point<T>& value) {point = value;}
+  xPoint<T>& getPoint() {return point;}
+  void setPoint(xPoint<T>& value) {point = value;}
 
   static int static_noargs() { return 0; }
   static int static_onearg(int i) { return i; }
 private:
-  Point<T> point;
+  xPoint<T> point;
 
   template <class Data>
   struct pair2nd_eq
   {
   };
 
-  struct Foo : Point<int>
+  struct Foo : xPoint<int>
   {
   };
   
@@ -38,6 +38,6 @@ private:
 
 %}
 
-%template(PointInt) Point<int>;
+%template(PointInt) xPoint<int>;
 %template(RectangleInt) RectangleTest<int>;
 

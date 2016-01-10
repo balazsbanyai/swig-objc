@@ -16,8 +16,8 @@ int main(int argc, char* argv[]) {
 	setCvar('S');
 	setFvar(3.14159);		 
 	setStrvar(@"Hello World");
-	setIptrvar(ObjcNew_int(37));
-	setPtptr(ObjcNew_TPoint(37,42));
+	setIptrvar(ObjcNewInt(37));
+	setPtptr(ObjcNewTPoint(37,42));
 	setName(@"Bill");
 	
 	//Now print out the values of variables
@@ -38,13 +38,13 @@ int main(int argc, char* argv[]) {
 	NSLog(@"strvar    = %@\n", getStrvar());
 	NSLog(@"iptrvar    =%p\n", getIptrvar());
 	NSLog(@"name      = %@\n", getName());
-	NSLog(@"ptptr     = %p %@\n", getPtptr(), ObjcTPoint_print(getPtptr()));	
-        NSLog(@"pt        ="); ObjcPt_print();
+	NSLog(@"ptptr     = %p %@\n", getPtptr(), ObjcTPointPrint(getPtptr()));	
+        NSLog(@"pt        ="); ObjcPtPrint();
 	NSLog(@"status    = %d\n", getStatus());
 	
 	
 	NSLog(@"\nVariables (values printed from C)\n");
-	ObjcPrint_vars();
+	ObjcPrintVars();
 	
         // This line would not compile: since status is marked with
 	// %immutable, there is no SetStatus function.
@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
 	
 	NSLog(@"The new value is \n");
 	
-	ObjcPt_print();
-	NSLog(@"You should see the value %@",ObjcTPoint_print(getPtptr())); 
+	ObjcPtPrint();
+	NSLog(@"You should see the value %@",ObjcTPointPrint(getPtptr())); 
         
         [pool drain];
 	return 0;

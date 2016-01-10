@@ -23,8 +23,8 @@ if (b2 != YES)
     NSLog(@"Runtime test 5 failed\n");
     
 BoolStructure *bs=[[BoolStructure alloc]init];
-[bs setM_bool1:YES];
-BOOL b4=[bs getM_bool1];
+[bs setMBool1:YES];
+BOOL b4=[bs getMBool1];
 if(b4 !=YES)
 NSLog(@"Runtime test 6 failed");
 

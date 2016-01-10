@@ -4,13 +4,13 @@
 class SomeClass{ }; 
  
 template<class T>  
-class Handle { 
+class Handler { 
 public: 
-    Handle( T* t=0 ) { };   
+    Handler( T* t=0 ) { };   
     // ... 
 }; 
  
-typedef Handle<SomeClass> hSomeClass; 
+typedef Handler<SomeClass> hSomeClass; 
 class AnotherClass { 
 public: 
   void someFunc( hSomeClass a = hSomeClass() ) { }; 
@@ -18,7 +18,7 @@ public:
 
 %}
 
-%template() Handle<SomeClass>;
+%template() Handler<SomeClass>;
 
 
 

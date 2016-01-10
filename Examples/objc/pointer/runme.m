@@ -7,11 +7,11 @@ NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 
     // First create some objects using the pointer library.
     NSLog(@"Testing the pointer library");
-    int* a = ObjcNew_intp();
-    int* b = ObjcNew_intp();
-    int* c = ObjcNew_intp();
-    ObjcIntp_assign(a,37);
-    ObjcIntp_assign(b,42);
+    int* a = ObjcNewIntp();
+    int* b = ObjcNewIntp();
+    int* c = ObjcNewIntp();
+    ObjcIntpAssign(a,37);
+    ObjcIntpAssign(b,42);
     
     // Note that getCPtr() has package access by default
     NSLog(@"     a =%p",a );
@@ -22,13 +22,13 @@ NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
     ObjcAdd(a,b,c);
     
     // Now get the result
-    int res = ObjcIntp_value(c);
+    int res = ObjcIntpValue(c);
     NSLog(@"     37 + 42 = %d", res);
     
     // Clean up the pointers
-    ObjcDelete_intp(a);
-    ObjcDelete_intp(b);
-    ObjcDelete_intp(c);
+    ObjcDeleteIntp(a);
+    ObjcDeleteIntp(b);
+    ObjcDeleteIntp(c);
     
     // Now try the typemap library
     // Now it is no longer necessary to manufacture pointers.

@@ -11,19 +11,19 @@
 %inline %{
 
 /* Point has no equality operator */
-typedef struct Point
+typedef struct s_Point
 {
   double x;
   double y;
-} Point;
+} s_Point;
 
-static const Point s_zeroPoint = { 0.0, 0.0 };
+static const s_Point s_zeroPoint = { 0.0, 0.0 };
 /* stack version */
-Point MakePoint(double x, double y) 
-  { Point new_point = {x, y}; return new_point; }
+s_Point MakePoint(double x, double y) 
+  { s_Point new_point = {x, y}; return new_point; }
 
-const Point* GetZeroPointPtr() { return &s_zeroPoint; }
-Point GetZeroPointCopy() { return s_zeroPoint; }
+const s_Point* GetZeroPointPtr() { return &s_zeroPoint; }
+s_Point GetZeroPointCopy() { return s_zeroPoint; }
 
 /* EqualOpDefined has correct equality operator */
 class EqualOpDefined {

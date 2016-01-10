@@ -1,16 +1,16 @@
 %module typemap_delete
 
-%typemap(in) Rect* (Rect temp) {
+%typemap(in) Rectv* (Rectv temp) {
   $1 = 0;
   will_not_compile
 }
 
-%typemap(in) Rect*;
+%typemap(in) Rectv*;
 
 %inline %{
-struct Rect
+struct Rectv
 {
   int val;
-  Rect(int v) : val(v) {}
+  Rectv(int v) : val(v) {}
 };
 %}

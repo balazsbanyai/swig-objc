@@ -61,6 +61,8 @@ private:
   String *proxy_global_function_defns;	// Code for the proxy class member functions definition.
   String *destrcutor_call;	// Contains an ObjectiveC call to the function wrapping the C++  destructor of the
   // current class (if there is a public C++ destructor).
+  
+  List *proxy_class_function_decls_list; // List of Objective-C class method declaration
 
 
   /* SWIG types data: Collects information about encountered types SWIG does not know about (e.g.
@@ -110,8 +112,9 @@ public:
       proxy_global_function_decls(NULL), 
       proxy_global_function_defns(NULL), 
       destrcutor_call(NULL), 
+      proxy_class_function_decls_list(NULL),
       unknown_types(NULL), 
-      empty_string(NewString("")) {
+      empty_string(NewStringEmpty()) {
   } 
   
   /* ------------------------------------------------------------
@@ -192,10 +195,10 @@ public:
 		Delete(proxyfile_mm);
 	}
 
-	f_runtime 	= NewString("");
-	f_init 		= NewString("");
-	f_header 	= NewString("");
-	f_wrappers 	= NewString("");
+	f_runtime 	= NewStringEmpty();
+	f_init 		= NewStringEmpty();
+	f_header 	= NewStringEmpty();
+	f_wrappers 	= NewStringEmpty();
 
 	// Register file targets with the SWIG file handler
 	Swig_register_filebyname("begin", f_wrap_mm);
@@ -231,25 +234,27 @@ public:
 	}
 	// Create strings for holding the generated code. These will be dumped
 	// to the generated files at the end of the top function.
-	wrap_h_code = NewString("");
-	wrap_mm_code = NewString("");
+	wrap_h_code = NewStringEmpty();
+	wrap_mm_code = NewStringEmpty();
 	if (proxy_flag) {
-		proxy_h_code 		= NewString("");
-		proxy_mm_code 		= NewString("");
-		swigtypes_h_code 	= NewString("");
-		swigtypes_mm_code 	= NewString("");
+		proxy_h_code 		= NewStringEmpty();
+		proxy_mm_code 		= NewStringEmpty();
+		swigtypes_h_code 	= NewStringEmpty();
+		swigtypes_mm_code 	= NewStringEmpty();
 
-        proxy_class_defns_code   	= NewString("");
-		proxy_class_itfc_code 		= NewString("");
-		proxy_class_impl_code 		= NewString("");
-		proxy_class_enums_code 		= NewString("");
-		proxy_class_function_decls 	= NewString("");
-		proxy_class_function_defns 	= NewString("");
-		proxy_global_function_decls = NewString("");
-		proxy_global_function_defns = NewString("");
-		proxy_class_imports 		= NewString("");
+        proxy_class_defns_code   	= NewStringEmpty();
+		proxy_class_itfc_code 		= NewStringEmpty();
+		proxy_class_impl_code 		= NewStringEmpty();
+		proxy_class_enums_code 		= NewStringEmpty();
+		proxy_class_function_decls 	= NewStringEmpty();
+		proxy_class_function_defns 	= NewStringEmpty();
+		proxy_global_function_decls = NewStringEmpty();
+		proxy_global_function_defns = NewStringEmpty();
+		proxy_class_imports 		= NewStringEmpty();
+		
+		proxy_class_function_decls_list = NewList();
 
-		destrcutor_call = NewString("");
+		destrcutor_call = NewStringEmpty();
 		unknown_types 	= NewHash();
 	}
 
@@ -321,6 +326,7 @@ public:
 		Delete(proxy_global_function_defns);
 		Delete(proxy_class_imports);
 		Delete(destrcutor_call);
+		Delete(proxy_class_function_decls_list);
 		Delete(unknown_types);
 
 		Delete(swigtypes_h_code);
@@ -451,6 +457,7 @@ public:
     	Clear(proxy_class_itfc_code);
     	Clear(proxy_class_impl_code);
     	Clear(destrcutor_call);
+    	Clear(proxy_class_function_decls_list);
   	}
 
   	Language::classHandler(n);
@@ -606,9 +613,9 @@ public:
   	String *typestring = SwigType_str(type, 0);
   	String *tm;
 
-  	String *crettype = NewString("");
-  	String *constants_h_code = NewString("");
-  	String *constants_mm_code = NewString("");
+  	String *crettype = NewStringEmpty();
+  	String *constants_h_code = NewStringEmpty();
+  	String *constants_mm_code = NewStringEmpty();
   	bool is_func_ptr = SwigType_isfunctionpointer(type);
 
   	if (!addSymbol(symname, n))
@@ -720,7 +727,7 @@ public:
 	SwigType *type = Getattr(n, "type");
 	ParmList *parmlist = Getattr(n, "parms");
 	String *crettype = SwigType_str(type, 0);
-	String *imrettype = NewString("");
+	String *imrettype = NewStringEmpty();
 	String *tm;
 	bool is_void_return = (Cmp(crettype, "void") == 0);
 	bool is_constructor = (Cmp(nodeType(n), "constructor") == 0);
@@ -843,16 +850,11 @@ public:
   	return Language::nativeWrapper(n);
   }
 
-  /* -----------------------------------------------------------------------------
-   * getOverloadedName()
-   * ----------------------------------------------------------------------------- */
-
+/* -----------------------------------------------------------------------------
+* getOverloadedName()
+* ----------------------------------------------------------------------------- */
   String *getOverloadedName(Node *n) {
 
-    /* Although JNI functions are designed to handle overloaded Java functions,
-     * a Java long is used for all classes in the SWIG intermediary class.
-     * The intermediary class methods are thus mangled when overloaded to give
-     * a unique name. */
     String *overloaded_name = NewStringf("%s", Getattr(n, "sym:name"));
 
     if (Getattr(n, "sym:overloaded")) {
@@ -860,6 +862,29 @@ public:
     }
 
     return overloaded_name;
+  }
+  
+/* -----------------------------------------------------------------------------
+* checkDuplicateDeclaration()
+* ----------------------------------------------------------------------------- */
+  void checkDuplicateDeclaration(String *decl, String *name) {
+  	String *ori_decl = Copy(decl);
+  	
+  	// if the method already exist, add an underscore
+    for (int i=0; i<Len(proxy_class_function_decls_list); i++) {
+      String *item = Getitem(proxy_class_function_decls_list, i);
+      if( Cmp(decl, item) == 0) {
+        Push(decl, "_"); 
+        Push(name, "_");
+      }
+    }
+    
+    if(Cmp(ori_decl, decl) != 0)
+      Swig_warning(WARN_OBJC_DUPLICATE_DECL, input_file, line_number, "duplicate declaration of objective-c method '%s', renaming to '%s'\n",ori_decl,decl);
+    
+    Append(proxy_class_function_decls_list,decl);
+
+    Delete(ori_decl);
   }
 
   /* Proxy class code generators */
@@ -895,18 +920,18 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
 
   // Get some useful attributes of this function
   String *symname = Getattr(n, "sym:name");
-  String *overloaded_name = getOverloadedName(n);
+  String *ccasesymname = Swig_string_ccase(symname);
   SwigType *type = Getattr(n, "type");
   ParmList *parmlist = Getattr(n, "parms");
   String *crettype = SwigType_str(type, 0);
   String *storage = Getattr(n, "storage");
-  String *objcrettype = NewString("");
-  String *imcall = NewString("");
-  String *function_defn = NewString("");
-  String *function_decl = NewString("");
+  String *objcrettype = NewStringEmpty();
+  String *imcall = NewStringEmpty();
+  String *function_defn = NewStringEmpty();
+  String *function_decl = NewStringEmpty();
   String *tm;
   String *imfunctionname = Getattr(n, "imfunctionname");
-  String *proxyfunctionname;
+  String *proxyfunctionname = NewStringEmpty();
   bool setter_flag = false;
 
   // Retrieve the ObjectiveC return type for this function
@@ -915,30 +940,24 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
     Printf(objcrettype, "%s", tm);
   } else {
     Swig_warning(WARN_OBJC_TYPEMAP_OBJCTYPE_UNDEF, input_file, line_number, "No objctype typemap defined for %s\n", crettype);
-  }
-
-  // Deal with overloading    
+  }   
 
   // Change the function name for global variables
   if (proxy_flag && global_variable_flag) {
-    proxyfunctionname = NewString("");
     setter_flag = (Cmp(symname, Swig_name_set(getNSpace(), variable_name)) == 0);
-    if (setter_flag)
-      Printf(proxyfunctionname, "set");
-    else
-      Printf(proxyfunctionname, "get");
+    String *ccvariablename = Swig_string_ccase(variable_name);
+    Printf(proxyfunctionname, (setter_flag)? "set%s" : "get%s", ccvariablename);
 
-    // Capitalize the first letter in the variable to create an ObjectiveC proxy function name
-    Putc(toupper((int) *Char(variable_name)), proxyfunctionname);
-    Printf(proxyfunctionname, "%s", Char(variable_name) + 1);
+    Delete(ccvariablename);
   } else {
-    proxyfunctionname = NewString("Objc");
-    // Capitalize the first letter
-    Putc(toupper((int) *Char(overloaded_name)), proxyfunctionname);
-    Printf(proxyfunctionname, "%s", Char(overloaded_name) + 1);
+    Printf(proxyfunctionname, "Objc%s", ccasesymname);
   }
 
   /* Write the proxy global function declaration and definition */
+  
+  // Deal with overloading 
+  if (Getattr(n, "sym:overloaded"))
+      Printv(proxyfunctionname, Getattr(n, "sym:overname"), NIL);
 
   // Begin the first line of the function
   Printv(function_decl, objcrettype, " ", proxyfunctionname, "(", NIL);
@@ -963,7 +982,7 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
     
     SwigType *pt = Getattr(p, "type");
     
-    String *objcparmtype = NewString("");
+    String *objcparmtype = NewStringEmpty();
 
     // Get the ObjectiveC parameter type for this parameter
     if ((tm = Getattr(p, "tmap:objctype"))) {
@@ -1029,15 +1048,13 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
     Printv(proxy_mm_code, function_defn, "\n", NIL);
   }
   //Delete(paramstring);
-  Delete(symname);
-  Delete(overloaded_name);
+  Delete(ccasesymname);
   Delete(proxyfunctionname);
   Delete(objcrettype);
   Delete(imcall);
   Delete(function_decl);
   Delete(function_defn);
 }
-
 
 /* -----------------------------------------------------------------------------
  * emitProxyClassFunction()
@@ -1055,19 +1072,19 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
 
   // Get some useful attributes of this function
   String *symname = Getattr(n, "sym:name");
-//   String *name = Getattr(n, "name");
   SwigType *type = Getattr(n, "type");
   ParmList *parmlist = Getattr(n, "parms");
   String *crettype = SwigType_str(type, 0);
-  String *objcrettype = NewString("");
-  String *imcall = NewString("");
-  String *function_defn = NewString("");
-  String *function_decl = NewString("");
+  String *objcrettype = NewStringEmpty();
+  String *imcall = NewStringEmpty();
+  String *function_defn = NewStringEmpty();
+  String *function_decl = NewStringEmpty();
   String *tm;
 
   String *imfunctionname = Getattr(n, "imfunctionname");
   String *proxyfunctionname;
-
+ 
+  bool variable_flag = member_variable_flag || static_member_variable_flag || member_constant_flag;
   bool setter_flag = false;
   bool static_flag = (static_member_func_flag || static_member_variable_flag);
 
@@ -1079,32 +1096,25 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
     Swig_warning(WARN_OBJC_TYPEMAP_OBJCTYPE_UNDEF, input_file, line_number, "No objctype typemap defined for %s\n", crettype);
   }
 
-  if (member_variable_flag || static_member_variable_flag || member_constant_flag) {
-    proxyfunctionname = NewString("");
+  if (variable_flag) {
+    proxyfunctionname = NewStringEmpty();
     setter_flag = Cmp(symname, Swig_name_set(getNSpace(), Swig_name_member(0, proxy_class_name, variable_name))) == 0;
-    if (setter_flag)
-      Printf(proxyfunctionname, "set");
-    else
-      Printf(proxyfunctionname, "get");
-    // Capitalize the first letter in the variable to create an ObjectiveC proxy function name
-    Putc(toupper((int) *Char(variable_name)), proxyfunctionname);
-    Printf(proxyfunctionname, "%s", Char(variable_name) + 1);
-
-  } else if (member_func_flag) {
-    proxyfunctionname = Copy(proxyfuncname);
+    String *ccvariablename = Swig_string_ccase(variable_name);
+    Printf(proxyfunctionname, (setter_flag)? "set%s" : "get%s", ccvariablename);
+    Delete(ccvariablename);
   } else {
-    proxyfunctionname = Copy(proxyfuncname);
-  }
-
-  // Deal with overloading    
+    proxyfunctionname = Swig_string_lccase(proxyfuncname);
+    
+    // if the method fist char is numerical, add an underscore
+    char c = *Char(proxyfunctionname);
+    if (c > 47 && c < 58)
+      Push(proxyfunctionname , "_");
+  } 
 
   /* Write the proxy function declaration and definition */
 
   // Begin the first line of the function declaration
-  if (static_flag)
-    Printv(function_decl, "+ (", objcrettype, ")", proxyfunctionname, NIL);
-  else
-    Printv(function_decl, "- (", objcrettype, ")", proxyfunctionname, NIL);
+  String *objcfuncdecl = Swig_string_lccase(proxyfunctionname);
 
   // Prepare the call to intermediate function
   Printv(imcall, imfunctionname, "(", NIL);
@@ -1120,12 +1130,11 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
     /* Ignored parameters */
-    if (skipIgnoredArgs(p)) {
+    if (skipIgnoredArgs(p))
 	  continue;
-    }
     
     SwigType *pt = Getattr(p, "type");
-    String *objcparmtype = NewString("");
+    String *objcparmtype = NewStringEmpty();
 
     // Get the ObjectiveC parameter type for this parameter
     if ((tm = Getattr(p, "tmap:objctype"))) {
@@ -1137,35 +1146,48 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
 
     if (gencomma)
       Printf(imcall, ", ");
-
-    String *arg = makeParameterName(n, p, i, setter_flag);
+    
+    String *objcparmname = (!static_flag && !gencomma)? NewString("self") : makeParameterName(n, p, i, setter_flag);
 
     // Use typemaps to transform type used in Objective-C proxy function to the one used in intermediate code.
     if ((tm = Getattr(p, "tmap:objcin"))) {
       substituteClassname(tm, pt);
-      Replaceall(tm, "$objcinput", arg);
+      Replaceall(tm, "$objcinput", objcparmname);
       Printv(imcall, tm, NIL);
     } else {
       Swig_warning(WARN_OBJC_TYPEMAP_OBJCIN_UNDEF, input_file, line_number, "No objcin typemap defined for %s\n", SwigType_str(pt, 0));
     }
-
-    // Add parameter to proxy function
-    if (static_flag) {
-      if (gencomma == 0)
-		Printf(function_decl, ":(%s)%s", objcparmtype, arg);
-      else if (gencomma >= 1)
-		Printf(function_decl, " %s:(%s)%s", arg, objcparmtype, arg);
-    } else {
-      if (gencomma == 1)
-		Printf(function_decl, ":(%s)%s", objcparmtype, arg);
-      else if (gencomma >= 2)
-		Printf(function_decl, " %s:(%s)%s", arg, objcparmtype, arg);
+ 
+    if (gencomma == (static_flag?0:1)) {
+      String *objcparmdecl;
+      if (!variable_flag && Strncmp(proxyfunctionname, "set", 3) && Strncmp(proxyfunctionname, "get", 3) ) {
+        objcparmdecl = Swig_string_ccase(objcparmname);
+        Push(objcparmdecl, "With");
+      } else {
+        objcparmdecl = NewStringEmpty();
+      }
+      
+      Printv(proxyfunctionname, objcparmdecl,":(", objcparmtype, ")", objcparmname, NIL);
+      Printf(objcfuncdecl, "%s:", objcparmdecl);
+      
+      Delete(objcparmdecl);
     }
+    else if (gencomma >= (static_flag?1:2)) {
+      String *objcparmdecl = Swig_string_lccase(objcparmname);
+	  Printf(proxyfunctionname, " %s:(%s)%s", objcparmdecl, objcparmtype, objcparmname);
+	  Printf(objcfuncdecl, "%s:", objcparmdecl);
+	  Delete(objcparmdecl);
+	}
+		
     gencomma++;
-
-    Delete(arg);
+    
+    Delete(objcparmname);
     Delete(objcparmtype);
   }
+  
+  // Deal with overloading  
+  checkDuplicateDeclaration(objcfuncdecl, proxyfunctionname);
+  Printv(function_decl, (static_flag)? "+":"-", " (", objcrettype, ")", proxyfunctionname, NIL);
 
   // First line of function definition
   Printv(function_defn, function_decl, " {\n", NIL);
@@ -1184,7 +1206,6 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
 
   Printf(function_defn, "  %s\n}\n", tm ? (const String *) tm : empty_string);
 
-
   /* Write the function declaration to the proxy_class_function_decls 
      and function definition to the proxy_class_function_defns */
   Printv(proxy_class_function_decls, function_decl, "\n", NIL);
@@ -1194,6 +1215,7 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
   Delete(proxyfunctionname);
   Delete(objcrettype);
   Delete(imcall);
+  Delete(objcfuncdecl);
   Delete(function_decl);
   Delete(function_defn);
 }
@@ -1213,21 +1235,16 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
   // Get some useful attributes of the constructor
   String *name = Getattr(n, "name");
   ParmList *parmlist = Getattr(n, "parms");
-  String *imcall = NewString("");
-  String *constructor_defn = NewString("");
-  String *constructor_decl = NewString("");
+  String *imcall = NewStringEmpty();
+  String *constructor_defn = NewStringEmpty();
+  String *constructor_decl = NewStringEmpty();
   String *tm;
   String *objcrettype = NewString("id");
-
   String *imfunctionname = Getattr(n, "imfunctionname");
   String *proxyfunctionname = NewString("init");
-
-  // Deal with overloading    
+  String *objcfuncdecl = Copy(proxyfunctionname);  
 
   /* Write the proxy class constructor declaration and definition */
-
-  // Begin the first line of the constructor
-  Printv(constructor_decl, "- (", objcrettype, ")", proxyfunctionname, NIL);
 
   // Prepare the call to intermediate function
   Printv(imcall, imfunctionname, "(", NIL);
@@ -1248,7 +1265,7 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
     }
     
     SwigType *pt = Getattr(p, "type");
-    String *objcparmtype = NewString("");
+    String *objcparmtype = NewStringEmpty();
 
     // Get the ObjectiveC parameter type for this parameter
     if ((tm = Getattr(p, "tmap:objctype"))) {
@@ -1261,12 +1278,12 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
     if (gencomma)
       Printf(imcall, ", ");
 
-    String *arg = makeParameterName(n, p, i, false);
+    String *objcparmname = makeParameterName(n, p, i, false);
 
     // Use typemaps to transform type used in Objective-C proxy function to the one used in intermediate code.
     if ((tm = Getattr(p, "tmap:objcin"))) {
       substituteClassname(tm, pt);
-      Replaceall(tm, "$objcinput", arg);
+      Replaceall(tm, "$objcinput", objcparmname);
       Printv(imcall, tm, NIL);
     } else {
       Swig_warning(WARN_OBJC_TYPEMAP_OBJCIN_UNDEF, input_file, line_number, "No objcin typemap defined for %s\n", SwigType_str(pt, 0));
@@ -1274,21 +1291,28 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
 
     // Add parameter to proxy function
     if (gencomma >= 1) {	// Subsequent arguments.
-      Printf(constructor_decl, " %s:", arg);
-    } else {			// First valid argument, prefix it with 'With' and capitalize the first letter
-      Printf(constructor_decl, "With");
-      Putc(toupper((int) *Char(arg)), constructor_decl);
-      Printf(constructor_decl, "%s:", (Char(arg) + 1));
+      String *objcparmdecl = Swig_string_lccase(objcparmname);
+      Printv(proxyfunctionname, " ", objcparmdecl,":(", objcparmtype, ")", objcparmname, NIL);
+      Printf(objcfuncdecl, "%s:", objcparmdecl);
+      Delete(objcparmdecl);
+    } else {// First valid argument, prefix it with 'With' and capitalize the first letter
+      String *objcparmdecl = Swig_string_ccase(objcparmname);
+      Printv(proxyfunctionname, "With", objcparmdecl,":(", objcparmtype, ")", objcparmname, NIL);
+      Printf(objcfuncdecl, "With%s:", objcparmdecl);
+      Delete(objcparmdecl);
     }
-
-    Printf(constructor_decl, "(%s)%s", objcparmtype, arg);
+    
     gencomma++;
 
-    Delete(arg);
+    Delete(objcparmname);
     Delete(objcparmtype);
 
   }
 
+  // Deal with overloading  
+  checkDuplicateDeclaration(objcfuncdecl, proxyfunctionname);
+  Printv(constructor_decl, "- (", objcrettype, ")", proxyfunctionname, NIL);
+  
   // First line of function definition
   Printv(constructor_defn, constructor_decl, " {\n", NIL);
   Printf(constructor_decl, ";");
@@ -1298,7 +1322,7 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
 
   // Insert the objcconstructor typemap
   Hash *attributes = NewHash();
-  String *constructor_code = NewString("");
+  String *constructor_code = NewStringEmpty();
   const String *construct_tm = typemapLookup(n, "objcconstructor", name, WARN_NONE, attributes);
   if (construct_tm) {
     Printv(constructor_code, construct_tm, NIL);
@@ -1373,7 +1397,7 @@ void OBJECTIVEC::emitProxyClass(Node *n) {
 	  String *proxyclassname = SwigType_str(Getattr(n, "classtypeobj"), 0);
 	  String *baseclassname = SwigType_str(Getattr(base.item, "name"), 0);
 	  Swig_warning(WARN_OBJC_MULTIPLE_INHERITANCE, Getfile(n), Getline(n),
-		       "Base %s of class %s ignored: multiple inheritance is not supported in Objective-C.\n", baseclassname, proxyclassname);
+		       "Base %s of class %s ignored: multiple inheritance is not supported in objective-c.\n", baseclassname, proxyclassname);
 	  base = Next(base);
 	}
       }
@@ -1397,15 +1421,15 @@ void OBJECTIVEC::emitProxyClass(Node *n) {
     }
   } else if (Len(pure_baseclass) > 0 && Len(baseclass) > 0) {
     Swig_warning(WARN_OBJC_MULTIPLE_INHERITANCE, Getfile(n), Getline(n),
-		 "Warning for %s proxy: Base class %s ignored. Multiple inheritance is not supported in Objective-C. ",
+		 "Warning for %s proxy: Base class %s ignored. Multiple inheritance is not supported in objective-c. ",
 		 "Perhaps you need one of the 'replace' or 'notderived' attributes in the objcbase typemap?\n", typemap_lookup_type, pure_baseclass);
   }
 
   /* Destructor handling */
   // If the C++ destructor is accessible (public), it is wrapped by the
   // dealloc() method in ObjectiveC. If it is not accessible, dealloc() method is written and throws an exception.
-  String *destructor_decl = NewString("");
-  String *destructor_defn = NewString("");
+  String *destructor_decl = NewStringEmpty();
+  String *destructor_defn = NewStringEmpty();
   const String *tm = NULL;
 
   String *destructor_methodname;
@@ -1430,7 +1454,7 @@ void OBJECTIVEC::emitProxyClass(Node *n) {
     Printv(destructor_decl, "- (void)", destructor_methodname, ";", NIL);
 
     // And, the dealloc() method definition for the proxy implementation
-    String *destructor_code = NewString("");
+    String *destructor_code = NewStringEmpty();
     Printv(destructor_code, tm, NIL);
 
     if (*Char(destrcutor_call)) {
@@ -1466,7 +1490,7 @@ void OBJECTIVEC::emitProxyClass(Node *n) {
   Printv(proxy_class_defns_code, "@class $objcclassname;\n", NIL);
 
   // the class interface
-  Printv(proxy_class_itfc_code, proxy_class_imports, proxy_class_enums_code,
+  Printv(proxy_class_itfc_code, proxy_class_imports,
 	 objcinterfacemodifier, " $objcclassname",
 	 (*Char(wanted_base) || *Char(protocols)) ? " : " : "", wanted_base,
 	 (*Char(wanted_base) && *Char(protocols)) ? ", " : "", protocols,
@@ -1659,7 +1683,7 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
       
     SwigType *pt = Getattr(p, "type");
     
-    String *arg = NewString("");
+    String *arg = NewStringEmpty();
     Printf(arg, "imarg%d", i + 1);
 
     // Get the "in" typemap for this argument and add to the wrapper->code
@@ -1706,8 +1730,8 @@ void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
     
     SwigType *pt = Getattr(p, "type");
     
-    String *imparmtype = NewString("");
-    String *arg = NewString("");
+    String *imparmtype = NewStringEmpty();
+    String *arg = NewStringEmpty();
 
     Printf(arg, "imarg%d", i + 1);
 

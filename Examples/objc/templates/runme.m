@@ -10,8 +10,8 @@ int main(int argc, char* argv[]) {
 
 
     //Create some class
-    vecint *iv =[[vecint alloc]initWith_sz:100];
-    vecdouble *dv=[[vecdouble alloc]initWith_sz:1000];
+    vecint *iv =[[vecint alloc]initWithSz:100];
+    vecdouble *dv=[[vecdouble alloc]initWithSz:1000];
     int i=0;
     for (i=0;i<100;i++)
         [iv setitem:i val:2*i];

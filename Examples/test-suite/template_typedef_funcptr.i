@@ -12,13 +12,13 @@
 
 #include <string>
 
-template<typename T> class Ptr {};
+template<typename T> class Pointer {};
  
 class MCContract {};
-typedef Ptr<MCContract> MCContractPtr;
+typedef Pointer<MCContract> MCContractPointer;
 %}
 
-%template() Ptr<MCContract>;
+%template() Pointer<MCContract>;
 
 %inline %{
 template <class Contract, typename ContractID, typename CallbackType>
@@ -34,7 +34,7 @@ class ContractFactory
  * CreateXXContractCallback is a pointer to a function taking no arguments and 
  * returning a pointer to an XXContract. 
  */
-typedef MCContractPtr (*CreateMCContractCallback)();
+typedef MCContractPointer (*CreateMCContractCallback)();
 %}
 
 
@@ -42,12 +42,12 @@ typedef MCContractPtr (*CreateMCContractCallback)();
 %template(MCContractFactory) ContractFactory<MCContract, std::string, CreateMCContractCallback>;
 
 //to a form which expands the typedef:
-//%template(MCContractFactory) ContractFactory<MCContract, std::string, Ptr<MCContract>(*)()>;
+//%template(MCContractFactory) ContractFactory<MCContract, std::string, Pointer<MCContract>(*)()>;
 
 %inline %{
-typedef MCContractPtr* ContractPtrPtr;
+typedef MCContractPointer* ContractPointerPointer;
 %}
 // Plain pointers were also causing problems...
-%template(MCContractFactory2) ContractFactory<MCContract, std::string, ContractPtrPtr>;
+%template(MCContractFactory2) ContractFactory<MCContract, std::string, ContractPointerPointer>;
 
 #endif

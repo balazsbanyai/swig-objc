@@ -28,7 +28,7 @@ extern "C" {
   void* working(void* t);
   pthread_t thread;
 #endif
-  static int thread_terminate = 0;
+  static int _thread_terminate = 0;
   
 }
 %}
@@ -55,7 +55,7 @@ extern "C" {
     }
 
     void stop() {
-      thread_terminate = 1;
+      _thread_terminate = 1;
     %#ifdef _WIN32
       /*TODO(bhy) what to do for win32? */
     %#else  
@@ -87,7 +87,7 @@ extern "C" {
 #endif
   {
     Foo* f = static_cast<Foo*>(t);
-    while ( ! thread_terminate ) {
+    while ( ! _thread_terminate ) {
       MilliSecondSleep(50);
       f->do_foo();
     }

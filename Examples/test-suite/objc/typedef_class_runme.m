@@ -8,7 +8,7 @@ RealA *a=[[RealA alloc]init];
 [a setA:3];
 
 B *b=[[B alloc]init];
-[b testA:a];
+[b testAWithA:a];
 
 [a release];
 [b release];

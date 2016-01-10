@@ -28,17 +28,16 @@ class string;
 	reason:@"null std::string" userInfo:nil];
 	@throw anException;
     } 
-    int length = [$input length];
-    int bufferSize = sizeof(char) * (length + 1);
-    char *buffer = (char*)malloc(bufferSize);
-    memset(buffer, 0, bufferSize);
-    int i = 0;
-    for (; i < length; ++i)
-        buffer[i] = [$input characterAtIndex: i];
-
-    const char *$1_pstr = (const char *)buffer; 
+    int $input_len = [$input length];
+    int $input_size = sizeof(char) * ($input_len + 1);
+    char *$input_buffer = (char*)malloc($input_size);
+    memset($input_buffer, 0, $input_size);
+    for (int i = 0; i < $input_len; ++i)
+        $input_buffer[i] = [$input characterAtIndex: i];
+    const char *$1_pstr = (const char *)$input_buffer; 
     $1.assign($1_pstr);
-    free(buffer); %}
+    free($input_buffer); 
+%}
 
 %typemap(out) string 
 %{ $result = [NSString stringWithUTF8String: $1.c_str()]; %}
@@ -59,18 +58,17 @@ class string;
 	reason:@"null std::string" userInfo:nil];
 	@throw anException;
    }
-   int length = [$input length];
-   int bufferSize = sizeof(char) * (length + 1);
-   char *buffer = (char*)malloc(bufferSize);
-   memset(buffer, 0, bufferSize);
-   int i = 0;
-   for (; i < length; ++i)
-       buffer[i] = [$input characterAtIndex: i];
-
-   const char *$1_pstr = (const char *)buffer; 
+   int $input_len = [$input length];
+   int $input_size = sizeof(char) * ($input_len + 1);
+   char *$input_buffer = (char*)malloc($input_size);
+   memset($input_buffer, 0, $input_size);
+   for (int i = 0; i < $input_len; ++i)
+       $input_buffer[i] = [$input characterAtIndex: i];
+   const char *$1_pstr = (const char *)$input_buffer; 
    std::string $1_str($1_pstr);
    $1 = &$1_str;
-   free(buffer); %}
+   free($input_buffer); 
+%}
 
 %typemap(out) const string & 
 %{ $result = [NSString stringWithUTF8String: $1->c_str()]; %}

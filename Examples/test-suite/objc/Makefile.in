@@ -35,7 +35,7 @@ include $(srcdir)/../common.mk
 # a file is found which has _runme.m appended after the testcase name.
 run_testcase = \
 	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
-	  $(COMPILETOOL) $(CXX) $(OBJCINCLUDES) -I. $(OBJCFLAGS) $(OBJCXXFLAGS) $(srcdir)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) $(OBJCLIBS) -L. -l$* -o $*_runme && \
+	  $(COMPILETOOL) $(CXX) -I. $(INCLUDES) $(OBJCINCLUDES) $(OBJCFLAGS) $(OBJCXXFLAGS) $(srcdir)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) $(OBJCLIBS) -L. -l$* -o $*_runme && \
        	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./$*_runme; \
 	fi
 

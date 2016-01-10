@@ -3,7 +3,7 @@ int main(int argc,char *argv[])
 {
 NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 //Foo *foo=[[Foo alloc]init];
-[Foo bar_double:1];
+[Foo barDoubleWithI:1];
 [pool drain];
 return 0;
 }

@@ -6,10 +6,10 @@ Test *test=[[Test alloc]init];
 NSString *t=@"hile";
 NSString *t1=@"hil\0";
 
-if([test strlen:t len:4] !=4)
+if([test strlenWithStr:t len:4] !=4)
 NSLog(@"bad multi-arg typemap");
 
-if([test strlen:t1 len:4] !=4)
+if([test strlenWithStr:t1 len:4] !=4)
 NSLog(@"bad multi-arg typemap");
 
 [pool drain];

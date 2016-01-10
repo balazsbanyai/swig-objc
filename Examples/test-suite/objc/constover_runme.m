@@ -7,17 +7,17 @@ NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
 NSString *p1;
 p1=ObjcTest(@"test");
 assert([p1 isEqualToString:@"test"]);
-p1=ObjcTest_pconst(@"test_pconst");
+p1=ObjcTestPconst(@"test_pconst");
 assert([p1 isEqualToString:@"test_pconst"]);	
 			 
 Foo *foo =[[Foo alloc]init];
-p1 =[foo test:@"test"];
+p1 =[foo testWithX:@"test"];
 assert([p1 isEqualToString:@"test"]);
 
-p1 =[foo test_pconst:@"test_pconst"];
+p1 =[foo testPconstWithX:@"test_pconst"];
 assert([p1 isEqualToString:@"test_pconst"]);
 				 
-p1 =[foo test_pconstm:@"test_pconstmethod"];
+p1 =[foo testPconstmWithX:@"test_pconstmethod"];
 assert([p1 isEqualToString:@"test_pconstmethod"]);
 	
 	
