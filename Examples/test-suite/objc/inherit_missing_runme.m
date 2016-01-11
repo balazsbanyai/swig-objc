@@ -3,7 +3,7 @@
 int main(int argc,char* argv[])
 {
 NSAutoreleasePool *pool=[[NSAutoreleasePool alloc]init];
-SWIGTYPE_p_Foo *a=ObjcNew_Foo();
+SWIGTYPE_p_Foo *a=ObjcNewFoo();
 Bar *b=[[Bar alloc]init];
 Spam *c=[[Spam alloc]init];
 NSString *t=ObjcDoBlah(a);

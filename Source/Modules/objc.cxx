@@ -59,6 +59,7 @@ private:
   String *proxy_class_function_defns;	// Code for the proxy class member functions definition.
   String *proxy_global_function_decls;	// Code for the proxy class member functions declaration.
   String *proxy_global_function_defns;	// Code for the proxy class member functions definition.
+  String *proxy_constant_decls;	        // Code for the proxy constant declaration.
   String *destrcutor_call;	// Contains an ObjectiveC call to the function wrapping the C++  destructor of the
   // current class (if there is a public C++ destructor).
   
@@ -111,6 +112,7 @@ public:
       proxy_class_function_defns(NULL),
       proxy_global_function_decls(NULL), 
       proxy_global_function_defns(NULL), 
+      proxy_constant_decls(NULL),
       destrcutor_call(NULL), 
       proxy_class_function_decls_list(NULL),
       unknown_types(NULL), 
@@ -211,7 +213,7 @@ public:
 	Swig_banner(f_wrap_h);
 	Printf(f_wrap_h, "\n");
 	Printf(f_wrap_h, "#ifndef %(upper)s_WRAP_H\n", module);
-	Printf(f_wrap_h, "#define %(upper)s_WRAP_H\n\n", module);
+	Printf(f_wrap_h, "#define %(upper)s_WRAP_H\n", module);
 	Printf(f_wrap_h, "\n#ifdef __cplusplus\n");
 	Printf(f_wrap_h, "extern \"C\" {\n");
 	Printf(f_wrap_h, "#endif\n\n");
@@ -250,6 +252,7 @@ public:
 		proxy_class_function_defns 	= NewStringEmpty();
 		proxy_global_function_decls = NewStringEmpty();
 		proxy_global_function_defns = NewStringEmpty();
+		proxy_constant_decls        = NewStringEmpty();
 		proxy_class_imports 		= NewStringEmpty();
 		
 		proxy_class_function_decls_list = NewList();
@@ -263,7 +266,7 @@ public:
 
 	// Write to the wrap_h
 	Dump(wrap_h_code, f_wrap_h);
-	Printf(f_wrap_h, "#ifdef __cplusplus\n");
+	Printf(f_wrap_h, "\n#ifdef __cplusplus\n");
 	Printf(f_wrap_h, "}\n");
 	Printf(f_wrap_h, "#endif\n");
 	Printf(f_wrap_h, "\n#endif\n");
@@ -276,7 +279,7 @@ public:
 	Dump(f_wrappers, f_wrap_mm);
 	Dump(wrap_mm_code, f_wrap_mm);
 	Wrapper_pretty_print(f_init, f_wrap_mm);
-	Printf(f_wrap_mm, "\n#ifdef __cplusplus\n");
+	Printf(f_wrap_mm, "#ifdef __cplusplus\n");
 	Printf(f_wrap_mm, "}\n");
 	Printf(f_wrap_mm, "#endif\n");
 
@@ -286,17 +289,29 @@ public:
 		for (Iterator swig_type = First(unknown_types); swig_type.key; swig_type = Next(swig_type)) {
 	  		emitTypeWrapperClass(swig_type.key, swig_type.item);
 		}
-
-        Dump(proxy_class_defns_code, f_proxy_h);
-        Printf(f_proxy_h, "\n");
-        Dump(proxy_class_enums_code, f_proxy_h);
-        Printf(f_proxy_h, "\n");
-        Dump(proxy_global_function_decls, f_proxy_h);
-        Printf(f_proxy_h, "\n");
-		Dump(swigtypes_h_code, f_proxy_h);
-		Printf(f_proxy_h, "\n");
+		
+        if (Len(proxy_class_defns_code) != 0) {
+          Printf(proxy_class_defns_code, "\n");
+          Dump(proxy_class_defns_code, f_proxy_h);
+        }
+        if (Len(proxy_class_enums_code) != 0) {
+          Dump(proxy_class_enums_code, f_proxy_h);
+        }
+        if (Len(proxy_constant_decls) != 0) {
+          Printf(proxy_constant_decls, "\n");
+          Dump(proxy_constant_decls, f_proxy_h);
+        }
+        if (Len(proxy_global_function_decls) != 0) {
+          Printf(proxy_global_function_decls, "\n");
+          Dump(proxy_global_function_decls, f_proxy_h);
+        }
+        if (Len(swigtypes_h_code) != 0) {
+          Printf(swigtypes_h_code, "\n");
+		  Dump(swigtypes_h_code, f_proxy_h);
+		}
+		
 		Dump(proxy_h_code, f_proxy_h);
-		Printf(f_proxy_h, "\n#ifdef __cplusplus\n");
+		Printf(f_proxy_h, "#ifdef __cplusplus\n");
 		Printf(f_proxy_h, "}\n");
 		Printf(f_proxy_h, "#endif\n\n");
 	}
@@ -328,6 +343,7 @@ public:
 		Delete(proxy_global_function_decls);
 		Delete(proxy_global_function_defns);
 		Delete(proxy_class_imports);
+		Delete(proxy_constant_decls);
 		Delete(destrcutor_call);
 		Delete(proxy_class_function_decls_list);
 		Delete(unknown_types);
@@ -608,7 +624,7 @@ public:
   virtual int constantWrapper(Node *n) {
   	SwigType *type = Getattr(n, "type");
   	String *symname = Getattr(n, "sym:name");
-  	String *value = Getattr(n, "value");
+  	
   	String *typestring = SwigType_str(type, 0);
   	String *tm;
 
@@ -616,23 +632,29 @@ public:
   	String *constants_h_code = NewStringEmpty();
   	String *constants_mm_code = NewStringEmpty();
   	bool is_func_ptr = SwigType_isfunctionpointer(type);
+  	// The %objcconst feature determines how the constant value is obtained
+    int const_feature_flag = GetFlag(n, "feature:objc:const");
+    // Check for the %objcconstvalue feature
+    String *value = Getattr(n, "feature:objc:constvalue");
 
   	if (!addSymbol(symname, n))
     	return SWIG_ERROR;
+    	
+    Swig_save("constantWrapper", n, "value", NIL);
 
   	// Get the corresponding ObjectiveC type or the intermediate type. "imtype" if no proxy and "objctype" if proxy_flag is true.
   	if (!is_func_ptr) {
     	if (proxy_flag) {
       		if ((tm = Swig_typemap_lookup("objctype", n, "", 0))) {
 				substituteClassname(tm, type);
-				Printf(crettype, "%s", tm);
+			    Printf(crettype, "const %s", tm);
       		}
       		else
 				Swig_warning(WARN_OBJC_TYPEMAP_OBJCTYPE_UNDEF, input_file, line_number, "No objctype typemap defined for %s\n", typestring);
     	}
     	else {
       		if ((tm = Swig_typemap_lookup("imtype", n, "", 0)))
-				Printf(crettype, "%s", tm);
+				  Printf(crettype, "const %s", tm);
       		else
 				Swig_warning(WARN_OBJC_TYPEMAP_IMTYPE_UNDEF, input_file, line_number, "No imtype typemap defined for %s\n", typestring);
     	}
@@ -649,12 +671,12 @@ public:
     	else
       		Printf(crettype, "%s", SwigType_str(type, symname));
   	}
-
-  	if (is_func_ptr) {
-    	variableWrapper(n);
+      
+    if (is_func_ptr) {
+        
     	Printf(constants_h_code, "extern %s %s;\n", crettype, symname);
     	//Printf(constants_mm_code, "%s %s = (%s)%s();\n", crettype, symname, typestring, Swig_name_wrapper(Swig_name_get(getNSpace(), symname)));
-    // Transform return type used in low level accessor to the type used in Objective-C constant definition
+        // Transform return type used in low level accessor to the type used in Objective-C constant definition
     	String *imcall = NewStringf("%s()", Swig_name_wrapper(Swig_name_get(getNSpace(), symname)));
     	if ((tm = Swig_typemap_lookup("objcvarout", n, "", 0))) {
       		substituteClassname(tm, type);
@@ -665,35 +687,49 @@ public:
       		Swig_warning(WARN_OBJC_TYPEMAP_OBJCOUT_UNDEF, input_file, line_number, "No objcout typemap defined for %s\n", crettype);
       		
     	Printf(constants_mm_code, "%s\n", tm);
+    	variableWrapper(n);
+    	
     	Delete(imcall);
-  	}
-  	else if (Getattr(n, "wrappedasconstant")) {
+    	
+  	} else if(value) {
+  	
+      Printf(constants_h_code, "extern %s %s;\n", crettype, symname);
+      Printf(constants_mm_code, "%s %s = %s;\n", crettype, symname, value);
+      
+  	} else if (!const_feature_flag) {
+  	
+  	  // Add the stripped quotes back in
+      if (SwigType_type(type) == T_STRING) {
+        value = NewStringf("@\"%s\"", Copy(Getattr(n, "value")));
+         Printf(constants_mm_code, "%s %s = %s;\n", crettype, symname, value);
+      } else if (SwigType_type(type) == T_CHAR) {
+        value = NewStringf("\'%s\'", Copy(Getattr(n, "value")));
+         Printf(constants_mm_code, "%s %s = %s;\n", crettype, symname, value);
+      } else {
+  	    value = Swig_name_wrapper(Swig_name_get(getNSpace(), symname));
+  	    Printf(constants_mm_code, "%s %s = (%s) %s();\n", crettype, symname, crettype, value);
+  	    variableWrapper(n);
+  	  }
+      
+      Printf(constants_h_code, "extern %s %s;\n", crettype, symname);
+      Delete(value);
+  	  
+  	} else if (Getattr(n, "wrappedasconstant")) {
   		if (SwigType_type(type) == T_CHAR)
-    		Printf(constants_mm_code, "%s %s= \'%s\';\n", crettype, symname, Getattr(n, "staticmembervariableHandler:value"));
+    		Printf(constants_mm_code, "%s %s = \'%s\';\n", crettype, symname, Getattr(n, "staticmembervariableHandler:value"));
 		else if (SwigType_type(type) == T_STRING)
-   		 	Printf(constants_mm_code, "%s const %s= @\"%s\";\n", crettype, symname, Getattr(n, "staticmembervariableHandler:value"));
+   		 	Printf(constants_mm_code, "%s const %s = @\"%s\";\n", crettype, symname, Getattr(n, "staticmembervariableHandler:value"));
   		else
-    		Printf(constants_mm_code, "%s %s= %s;\n", crettype, symname, Getattr(n, "staticmembervariableHandler:value")); 
+    		Printf(constants_mm_code, "%s %s = %s;\n", crettype, symname, Getattr(n, "value")); 
   	}
   	else {
-  		if (SwigType_type(type) == T_STRING) {
-      		// http://stackoverflow.com/questions/538996/constants-in-objective-c/539191#539191
-      		Printf(constants_h_code, "extern %s const %s;\n", crettype, symname);
-      		Printf(constants_mm_code, "%s const %s= @\"%s\";\n", crettype, symname, value);
-    	}
-    	else if (SwigType_type(type) == T_CHAR) {
-      		Printf(constants_h_code, "extern %s %s;\n", crettype, symname);
-      		Printf(constants_mm_code, "%s %s= \'%s\';\n", crettype, symname, value);
-    	}
-    	else {
-      		Printf(constants_h_code, "extern %s %s;\n", crettype, symname);
-      		Printf(constants_mm_code, "%s %s= %s;\n", crettype, symname, value);
-    	}
-  	}
-  
+ 	  Printf(constants_h_code, "extern %s %s;\n", crettype, symname);
+      Printf(constants_mm_code, "%s %s = %s;\n", crettype, symname, Getattr(n, "value"));
+   	}
+
   	// Dump to generated files
   	if (proxy_flag) {		// write to the proxy files
-    	Printv(proxy_h_code, constants_h_code, NIL);
+    	Printv(proxy_constant_decls, constants_h_code, NIL);
     	Printv(proxy_mm_code, constants_mm_code, NIL);
   	}
   	else {			// write to the wrap files
@@ -706,13 +742,6 @@ public:
   	Delete(constants_h_code);
   	Delete(constants_mm_code);
   	return SWIG_OK;
-  }
-  
-/* ---------------------------------------------------------------------
- * variableWrapper()  
- * --------------------------------------------------------------------- */
-  virtual int variableWrapper(Node *n) {
-  	return Language::variableWrapper(n);
   }
   
 /* ---------------------------------------------------------------------
@@ -731,7 +760,6 @@ public:
 	bool is_void_return = (Cmp(crettype, "void") == 0);
 	bool is_constructor = (Cmp(nodeType(n), "constructor") == 0);
 	bool is_destructor = (Cmp(nodeType(n), "destructor") == 0);
-	bool is_constant = (Cmp(nodeType(n), "constant") == 0);
 
 	if (!Getattr(n, "sym:overloaded") && !addSymbol(symname, n))
 		return SWIG_ERROR;
@@ -776,20 +804,8 @@ public:
 	// Now walk the function parameter list and generate code to get arguments.
 	marshalInputArgs(parmlist, wrapper);
 
-	// Emit the function call
-	if (is_constant) {		// Wrapping a constant hack.
-		Swig_save("functionWrapper", n, "wrap:action", NIL);
-
-		// below based on Swig_VargetToFunction()
-		SwigType *ty = Swig_wrapped_var_type(Getattr(n, "type"), use_naturalvar_mode(n));
-		Setattr(n, "wrap:action", NewStringf("%s = (%s) %s;", Swig_cresult_name(), SwigType_lstr(ty, 0), Getattr(n, "value")));
-	}
-
 	Setattr(n, "wrap:name", wname);
 	String *actioncode = emit_action(n);
-
-	if (is_constant)
-		Swig_restore(n);
 
 	// Write typemaps(out) and return value if necessary.
 	marshalOutput(n, actioncode, wrapper);

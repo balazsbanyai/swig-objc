@@ -40,7 +40,10 @@ class string;
 %}
 
 %typemap(out) string 
-%{ $result = [NSString stringWithUTF8String: $1.c_str()]; %}
+%{ $result = [NSString stringWithUTF8String: $1.c_str()];
+#if !__has_feature(objc_arc)
+	[$result autorelease];
+#endif%}
 
 %typemap(objcin) string "$objcinput"
 
@@ -71,7 +74,10 @@ class string;
 %}
 
 %typemap(out) const string & 
-%{ $result = [NSString stringWithUTF8String: $1->c_str()]; %}
+%{ $result = [NSString stringWithUTF8String: $1->c_str()];
+#if !__has_feature(objc_arc)
+	[$result autorelease];
+#endif%}
 
 %typemap(objcin) const string & "$objcinput"
 

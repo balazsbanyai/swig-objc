@@ -153,28 +153,28 @@
 %typemap(in) char *, char[ANY], char[]  {
  $1 = 0;
   if ($input) { // TODO: Find a better way to do this!
-		int length = [$input length];
-		int bufferSize = sizeof(char) * (length + 1);
-		char *buffer = (char*)malloc(bufferSize);
-		memset(buffer, 0, bufferSize);
+		int $input_len = [$input length];
+		int $input_size = sizeof(char) * ($input_len + 1);
+		char *$input_buffer = (char*)malloc($input_size);
+		memset($input_buffer, 0, $input_size);
 		int i = 0;
-		for (; i < length; ++i)
-			buffer[i] = [$input characterAtIndex: i];
-			$1 = ($1_ltype)buffer;
+		for (; i < $input_len; ++i)
+			$input_buffer[i] = [$input characterAtIndex: i];
+			$1 = ($1_ltype)$input_buffer;
 	}
 }
 
 %typemap(in) char *& ($*1_ltype temp = 0) {
  $1 = 0;
   if ($input) { // TODO: Find a better way to do this!
-		int length = [$input length];
-		int bufferSize = sizeof(char) * (length + 1);
-		char *buffer = (char*)malloc(bufferSize);
-		memset(buffer, 0, bufferSize);
+		int $input_len = [$input length];
+		int $input_size = sizeof(char) * ($input_len + 1);
+		char *$input_buffer = (char*)malloc($input_size);
+		memset($input_buffer, 0, $input_size);
 		int i = 0;
-		for (; i < length; ++i)
-			buffer[i] = [$input characterAtIndex: i];
-    temp = ($*1_ltype)buffer;
+		for (; i < $input_len; ++i)
+			$input_buffer[i] = [$input characterAtIndex: i];
+    temp = ($*1_ltype)$input_buffer;
   }
   $1 = &temp;
 }
@@ -203,7 +203,7 @@
 
 // Pointer to a class member will be passed as void*, convert appropriately
 %typemap(in) SWIGTYPE (CLASS::*)
-%{ $1 = *($&1_ltype)$input; %}
+%{ $1 = *($&1_ltype)&$input; %}
 
 // Function pointers
 %typemap(in) SWIGTYPE ((*)(ANY))
@@ -276,9 +276,19 @@
     return ret; %}
 
 // C strings: 
-%typemap(out)const char *,char * %{ if ($1) $result = [NSString stringWithUTF8String: (const char*)$1]; %}
+%typemap(out)const char *,char * %{ if ($1) { 
+	$result = [NSString stringWithUTF8String: (const char*)$1];
+#if !__has_feature(objc_arc)
+	[$result autorelease];
+#endif
+}%}
 %typemap(out) char *& %{ if (*$1) $result = [NSString stringWithUTF8String: (const char*)*$1]; %}
-%typemap(out) char[ANY], char[] %{ if ($1) $result = [NSString stringWithUTF8String: (const char*)$1]; %}
+%typemap(out) char[ANY], char[] %{ if ($1) {
+	$result = [NSString stringWithUTF8String: (const char*)$1];
+#if !__has_feature(objc_arc)
+	[$result autorelease];
+#endif
+}%}
 
 // Objects returned by value: convert to a pointer.
 %typemap(out) SWIGTYPE ($&1_type temp)
@@ -541,7 +551,10 @@
 %{   void* cPtr = $imcall;
      $objcclassname* ret = nil;
      if(cPtr) {
-        ret = [[[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO] autorelease];
+        ret = [[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO];
+#if !__has_feature(objc_arc)
+	   [ret autorelease];
+#endif
      }
     return ret; %}
 
@@ -552,7 +565,10 @@
 %{   void* cPtr = $imcall;
      $objcclassname* ret = nil;
      if(cPtr) {
-        ret = [[[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO] autorelease];
+        ret = [[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO];
+#if !__has_feature(objc_arc)
+	   [ret autorelease];
+#endif
      }
     return ret; %}
 	
@@ -560,7 +576,10 @@
 %{   void* cPtr = $imcall;
      $objcclassname* ret = nil;
      if(cPtr) {
-        ret = [[[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO] autorelease];
+        ret = [[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO];
+#if !__has_feature(objc_arc)
+	   [ret autorelease];
+#endif
      }
     return ret; %}
     
@@ -569,19 +588,29 @@
 %{   void* cPtr = $imcall;
      $objcclassname* ret = nil;
      if(cPtr) {
-        ret = [[[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO] autorelease];
+        ret = [[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO];
+#if !__has_feature(objc_arc)
+	   [ret autorelease];
+#endif
      }
     return ret; %}
     
 %typemap(objcvarout) SWIGTYPE ((*)(ANY)) 
-%{ $objcclassname* $objcvarname = [[[$objcclassname alloc] initWithCptr:($imcall) swigOwnCObject:NO] autorelease]; %}
+%{#if __has_feature(objc_arc)
+$objcclassname* $objcvarname = [[$objcclassname alloc] initWithCptr:($imcall) swigOwnCObject:NO]; 
+#else
+$objcclassname* $objcvarname = [[[$objcclassname alloc] initWithCptr:($imcall) swigOwnCObject:NO] retain]; 
+#endif%}
 
 // Pointer to a class member will be returned as id
 %typemap(objcout) SWIGTYPE (CLASS::*) 
 %{   void* cPtr = $imcall;
      $objcclassname* ret = nil;
      if(cPtr) {
-        ret = [[[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO] autorelease];
+        ret = [[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO];
+#if !__has_feature(objc_arc)
+	   [ret autorelease];
+#endif
      }
     return ret; %}
 
@@ -589,7 +618,10 @@
 %{   void* cPtr = $imcall;
      $objcclassname* ret = nil;
      if(cPtr) {
-        ret = [[[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO] autorelease];
+        ret = [[$objcclassname alloc] initWithCptr:cPtr swigOwnCObject:NO];
+#if !__has_feature(objc_arc)
+	   [ret autorelease];
+#endif
      }
     return ret; %}
  
@@ -627,6 +659,8 @@
 /* Objective-C specific directives */
 #define %objcconst(flag)            %feature("objc:const","flag")
 #define %objcconstvalue(value)      %feature("objc:constvalue",value)
+#define %objcenum(wrapapproach)     %feature("objc:enum","wrapapproach")
+#define %objcmethodmodifiers        %feature("objc:methodmodifiers")
 #define %objcexception(exceptionclasses) %feature("except",throws=exceptionclasses)
 #define %noobjcexception            %feature("except","0",throws="")
 #define %clearobjcexception         %feature("except","",throws="")

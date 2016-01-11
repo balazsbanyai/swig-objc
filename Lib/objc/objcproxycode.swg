@@ -43,7 +43,9 @@
     }
     swigCPtr = NULL;
   }
-  [super dealloc];%}
+#if !__has_feature(objc_arc)
+  [super dealloc];
+#endif%}
 
 // Proxy interface and implementation (for C++ class with no base class)
 %typemap(objcinterfacecode) SWIGTYPE %{ {
