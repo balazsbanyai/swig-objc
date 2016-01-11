@@ -4,7 +4,7 @@ void check_ll(long long ll) {
      setLl(ll);
     long long ll_check = ll;
     if (ll != ll_check) 
-      NSLog(@"Runtime test using long long failed ll= %ll ll_check= %ll",ll,ll_check);
+      NSLog(@"Runtime test using long long failed ll= %lld ll_check= %lld",ll,ll_check);
     }
 
    void check_ull(unsigned long long ull) {

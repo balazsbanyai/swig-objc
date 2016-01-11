@@ -221,7 +221,7 @@ public:
 
 	if (proxy_flag) {
 		Swig_banner(f_proxy_h);
-		Printf(f_proxy_h, "\n#import <Foundation/Foundation.h>\n\n");
+		Printf(f_proxy_h, "\n#import <Foundation/Foundation.h>\n");
 
 		// ObjectiveC will understand the C code.
 		Printf(f_proxy_h, "\n#ifdef __cplusplus\n");
@@ -263,11 +263,10 @@ public:
 
 	// Write to the wrap_h
 	Dump(wrap_h_code, f_wrap_h);
-	Printf(f_wrap_h, "\n#ifdef __cplusplus\n");
+	Printf(f_wrap_h, "#ifdef __cplusplus\n");
 	Printf(f_wrap_h, "}\n");
 	Printf(f_wrap_h, "#endif\n");
-	Printf(f_wrap_h, "\n#endif\n\n");
-
+	Printf(f_wrap_h, "\n#endif\n");
 	// Write to the wrap_mm
 	Dump(f_runtime, f_wrap_mm);
 	Dump(f_header, f_wrap_mm);
@@ -292,7 +291,10 @@ public:
         Printf(f_proxy_h, "\n");
         Dump(proxy_class_enums_code, f_proxy_h);
         Printf(f_proxy_h, "\n");
+        Dump(proxy_global_function_decls, f_proxy_h);
+        Printf(f_proxy_h, "\n");
 		Dump(swigtypes_h_code, f_proxy_h);
+		Printf(f_proxy_h, "\n");
 		Dump(proxy_h_code, f_proxy_h);
 		Printf(f_proxy_h, "\n#ifdef __cplusplus\n");
 		Printf(f_proxy_h, "}\n");
@@ -301,6 +303,7 @@ public:
 	
 	// Write to proxy.mm, if required
 	if (proxy_flag) {
+	    Dump(proxy_global_function_defns, f_proxy_mm);
 		Dump(swigtypes_mm_code, f_proxy_mm);
 		Dump(proxy_mm_code, f_proxy_mm);
 	}
@@ -452,8 +455,6 @@ public:
     	Clear(proxy_class_imports);
     	Clear(proxy_class_function_decls);
     	Clear(proxy_class_function_defns);
-    	Clear(proxy_global_function_decls);
-    	Clear(proxy_global_function_defns);
     	Clear(proxy_class_itfc_code);
     	Clear(proxy_class_impl_code);
     	Clear(destrcutor_call);
@@ -474,8 +475,6 @@ public:
     	// And, dump everything to the proxy files
     	Printv(proxy_h_code, proxy_class_itfc_code, NIL);
     	Printv(proxy_mm_code, proxy_class_impl_code, NIL);
-    	Printv(proxy_h_code,proxy_global_function_decls,NIL);
-    	Printv(proxy_mm_code,proxy_global_function_defns,NIL);
     
     	// Tidy up
     	Delete(proxy_class_qname);
@@ -924,7 +923,7 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
   SwigType *type = Getattr(n, "type");
   ParmList *parmlist = Getattr(n, "parms");
   String *crettype = SwigType_str(type, 0);
-  String *storage = Getattr(n, "storage");
+//   String *storage = Getattr(n, "storage");
   String *objcrettype = NewStringEmpty();
   String *imcall = NewStringEmpty();
   String *function_defn = NewStringEmpty();
@@ -1039,14 +1038,15 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
 
   /* Write the function declaration to the proxy_h_code 
      and function definition to the proxy_mm_code */
-  if ((member_func_flag || member_constant_flag || Cmp(storage, "friend") == 0 || Cmp(storage, "typedef") == 0)) {
-    Printv(proxy_global_function_decls, function_decl, "\n", NIL);
-    Printv(proxy_global_function_defns, function_defn, "\n", NIL);
-  }
-  else {
-    Printv(proxy_h_code, function_decl, "\n", NIL);
-    Printv(proxy_mm_code, function_defn, "\n", NIL);
-  }
+//   if ((member_func_flag || member_constant_flag || Cmp(storage, "friend") == 0 || Cmp(storage, "typedef") == 0)) {
+  Printv(proxy_global_function_decls, function_decl, "\n", NIL);
+  Printv(proxy_global_function_defns, function_defn, "\n", NIL);
+//   }
+//   else {
+//     Printv(proxy_h_code, function_decl, "\n", NIL);
+//     Printv(proxy_mm_code, function_defn, "\n", NIL);
+//   }
+
   //Delete(paramstring);
   Delete(ccasesymname);
   Delete(proxyfunctionname);
@@ -1556,6 +1556,7 @@ void OBJECTIVEC::emitTypeWrapperClass(String *classname, SwigType *type) {
   Printv(swigtypes_mm_code, "\n", objccimplementationmodifier, " $objcclassname", objcimplementationcode,
 	 "\n", typemapLookup(n, "objcclassclose", type, WARN_NONE), "\n\n", NIL);
 
+  Printf(proxy_class_defns_code, "@class %s;\n", classname);
   Replaceall(swigtypes_h_code, "$objcclassname", classname);
   Replaceall(swigtypes_mm_code, "$objcclassname", classname);
 
