@@ -517,6 +517,7 @@ public:
   	String *enumname;
 
   	Node *p = parentNode(n);
+  	
   	if (p && !Cmp(nodeType(p), "class")) {	// This is a nested enum, prefix the class name
     	String *parentname = Getattr(p, "sym:name");
     	enumname = NewStringf("%s_%s", parentname, symname);
@@ -687,6 +688,8 @@ public:
       		Swig_warning(WARN_OBJC_TYPEMAP_OBJCOUT_UNDEF, input_file, line_number, "No objcout typemap defined for %s\n", crettype);
       		
     	Printf(constants_mm_code, "%s\n", tm);
+    	
+    	SetFlag(n, "feature:immutable");
     	variableWrapper(n);
     	
     	Delete(imcall);
@@ -708,6 +711,8 @@ public:
       } else {
   	    value = Swig_name_wrapper(Swig_name_get(getNSpace(), symname));
   	    Printf(constants_mm_code, "%s %s = (%s) %s();\n", crettype, symname, crettype, value);
+  	    
+  	    SetFlag(n, "feature:immutable");
   	    variableWrapper(n);
   	  }
       
@@ -988,12 +993,12 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
   Parm *p;
   int i = 0;
   int gencomma = 0;
+  
+  emit_mark_varargs(parmlist);
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    /* Ignored parameters */
-    if (skipIgnoredArgs(p)) {
-	  continue;
-    }
+    if(skipIgnoredArgs(p))
+      continue;
     
     SwigType *pt = Getattr(p, "type");
     
@@ -1143,11 +1148,12 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
   Parm *p;
   int i = 0;
   int gencomma = 0;
+  
+  emit_mark_varargs(parmlist);
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    /* Ignored parameters */
-    if (skipIgnoredArgs(p))
-	  continue;
+    if(skipIgnoredArgs(p))
+      continue;
     
     SwigType *pt = Getattr(p, "type");
     String *objcparmtype = NewStringEmpty();
@@ -1273,12 +1279,12 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
   Parm *p;
   int i = 0;
   int gencomma = 0;
+  
+  emit_mark_varargs(parmlist);
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-    /* Ignored parameters */
-    if (skipIgnoredArgs(p)) {
-	  continue;
-    }
+    if(skipIgnoredArgs(p))
+      continue;
     
     SwigType *pt = Getattr(p, "type");
     String *objcparmtype = NewStringEmpty();
@@ -1319,7 +1325,7 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
     }
     
     gencomma++;
-
+    
     Delete(objcparmname);
     Delete(objcparmtype);
 
@@ -1673,9 +1679,16 @@ void OBJECTIVEC::substituteClassnameVariable(String *tm, const char *classnameva
  *
  * --------------------------------------------------------------------- */
 bool OBJECTIVEC::skipIgnoredArgs(Parm *p) {
+  /* Ignored varargs */
+  if (checkAttribute(p, "varargs:ignore", "1")) {
+    p = nextSibling(p);
+	return true;
+  }
+
+  /* Ignored parameters */
   if (checkAttribute(p, "tmap:in:numinputs", "0")) {
-	  p = Getattr(p, "tmap:in:next");
-	  return true;
+    p = Getattr(p, "tmap:in:next");
+	return true;
   }
   return false;
 }
@@ -1693,12 +1706,10 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
   int i = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-	/* Ignored parameters */
-    if (skipIgnoredArgs(p)) {
-	  continue;
-    }
+	if(skipIgnoredArgs(p))
+      continue;
       
-    SwigType *pt = Getattr(p, "type");
+//     SwigType *pt = Getattr(p, "type");
     
     String *arg = NewStringEmpty();
     Printf(arg, "imarg%d", i + 1);
@@ -1708,10 +1719,12 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
       Replaceall(tm, "$input", arg);
       Setattr(p, "emit:input", arg);
       Printf(wrapper->code, "%s\n", tm);
-    } else {
-      Swig_warning(WARN_TYPEMAP_IN_UNDEF, input_file, line_number, "Unable to use type %s as a function argument.\n", SwigType_str(pt, 0));
-      p = nextSibling(p);
-    }
+    } 
+//     else {
+//       Swig_warning(WARN_TYPEMAP_IN_UNDEF, input_file, line_number, "Unable to use type %s as a function argument.\n", SwigType_str(pt, 0));
+//       p = nextSibling(p);
+//     }
+    
     Delete(arg);
   }
 
@@ -1739,11 +1752,8 @@ void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
   int gencomma = 0;
 
   for (p = parmlist; p; p = nextSibling(p), i++) {
-  
-    /* Ignored parameters */
-    if (skipIgnoredArgs(p)) {
-	  continue;
-    }
+    if(skipIgnoredArgs(p))
+      continue;
     
     SwigType *pt = Getattr(p, "type");
     
@@ -1756,13 +1766,11 @@ void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
     if ((tm = Getattr(p, "tmap:imtype"))) {
       Printv(imparmtype, tm, NIL);
       if (gencomma)
-	Printf(wrapper->def, ", ");
+	  Printf(wrapper->def, ", ");
       Printv(wrapper->def, imparmtype, " ", arg, NIL);	// Add parameter to the function signature (wrapper->def)
       ++gencomma;
-    } else {
+    } else
       Swig_warning(WARN_OBJC_TYPEMAP_IMTYPE_UNDEF, input_file, line_number, "No imtype typemap defined for %s\n", SwigType_str(pt, 0));
-      p = nextSibling(p);
-    }
 
     Delete(imparmtype);
     Delete(arg);
