@@ -465,16 +465,16 @@
 %typemap(objcin) char *&                    "$objcinput"
 
 // Objects passed by value: Convert from an ObjectiveC pointer to the ObjectiveC++ void* pointer.
-%typemap(objcin) SWIGTYPE "[$objcinput getCptr]"
+%typemap(objcin) SWIGTYPE "$objcinput.swigCPtr"
 
 // C/C++ Pointers, primary and object, are exported as ObjectiveC pointers
-%typemap(objcin) SWIGTYPE *, SWIGTYPE & "[$objcinput getCptr]"
-%typemap(objcin) SWIGTYPE "[$objcinput getCptr]"
+%typemap(objcin) SWIGTYPE *, SWIGTYPE & "$objcinput.swigCPtr"
+%typemap(objcin) SWIGTYPE "$objcinput.swigCPtr"
 
 // Pointer to a class member will be passed as void*, convert appropriately
-%typemap(objcin) SWIGTYPE (CLASS::*) "[$objcinput getCptr]" 
+%typemap(objcin) SWIGTYPE (CLASS::*) "$objcinput.swigCPtr" 
 
-%typemap(objcin) SWIGTYPE *const& "[$objcinput getCptr]" 
+%typemap(objcin) SWIGTYPE *const& "$objcinput.swigCPtr" 
 
 /*
  * OBJCOUT TYPEMAPS: Used for return-type type conversions: ObjectiveC++(wrapper) to ObjectiveC(proxy)

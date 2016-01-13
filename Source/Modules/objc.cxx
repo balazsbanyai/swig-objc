@@ -47,6 +47,7 @@ private:
   String *proxy_class_qname;	// The name of the current proxy class, qualified with the name of the namespace it is in, if any.
   // TODO: Add this when nspaces are handled. Not now!
 
+  String *proxy_class_imports_code;	// The proxy imports code.This goes in the proxy_h file if proxy_flag is true.
   String *proxy_class_defns_code;	// The proxy class declaration code.This goes in the proxy_h file if proxy_flag is true.
   String *proxy_class_itfc_code;	// The proxy class interface code.This goes in the proxy_h file if proxy_flag is true.
   String *proxy_class_impl_code;	// The proxy class implementation code.This goes in the proxy_mm file if proxy_flag is true.
@@ -103,6 +104,7 @@ public:
       proxyfuncname(NULL),
       proxy_class_name(NULL),
       proxy_class_qname(NULL),
+      proxy_class_imports_code(NULL),
       proxy_class_defns_code(NULL),
       proxy_class_itfc_code(NULL),
       proxy_class_impl_code(NULL),
@@ -223,12 +225,6 @@ public:
 
 	if (proxy_flag) {
 		Swig_banner(f_proxy_h);
-		Printf(f_proxy_h, "\n#import <Foundation/Foundation.h>\n");
-
-		// ObjectiveC will understand the C code.
-		Printf(f_proxy_h, "\n#ifdef __cplusplus\n");
-		Printf(f_proxy_h, "extern \"C\" {\n");
-		Printf(f_proxy_h, "#endif\n\n");
 
 		Swig_banner(f_proxy_mm);
 		Printf(f_proxy_mm, "#include \"%s_proxy.h\"\n", module);
@@ -244,6 +240,7 @@ public:
 		swigtypes_h_code 	= NewStringEmpty();
 		swigtypes_mm_code 	= NewStringEmpty();
 
+        proxy_class_imports_code	= NewString("\n#import <Foundation/Foundation.h>\n");
         proxy_class_defns_code   	= NewStringEmpty();
 		proxy_class_itfc_code 		= NewStringEmpty();
 		proxy_class_impl_code 		= NewStringEmpty();
@@ -285,6 +282,14 @@ public:
 
 	// Write to the proxy.h, if required
 	if (proxy_flag) {
+	
+	    Printf(proxy_class_imports_code, "\n");
+	    Dump(proxy_class_imports_code, f_proxy_h);
+
+		// ObjectiveC will understand the C code.
+		Printf(f_proxy_h, "#ifdef __cplusplus\n");
+		Printf(f_proxy_h, "extern \"C\" {\n");
+		Printf(f_proxy_h, "#endif\n\n");
 
 		for (Iterator swig_type = First(unknown_types); swig_type.key; swig_type = Next(swig_type)) {
 	  		emitTypeWrapperClass(swig_type.key, swig_type.item);
@@ -334,6 +339,7 @@ public:
 	Delete(f_wrap_mm);
 
 	if (proxy_flag) {
+		Delete(proxy_class_imports_code);
 	    Delete(proxy_class_defns_code);
 		Delete(proxy_class_itfc_code);
 		Delete(proxy_class_impl_code);
@@ -358,7 +364,18 @@ public:
 
 	return SWIG_OK;
   }
-  
+/* ----------------------------------------------------------------------
+ * Language::importDirective()
+ * ---------------------------------------------------------------------- */
+
+  virtual int importDirective(Node *n) {
+    String *module = Getattr(n, "module");
+    if (module)
+	  Printf(proxy_class_imports_code, "#import \"%s_proxy.h\"\n", module);
+
+    return Language::importDirective(n);
+  }
+
 /* ---------------------------------------------------------------------
  * globalfunctionHandler()
  * --------------------------------------------------------------------- */
@@ -454,7 +471,7 @@ public:
   virtual int destructorHandler(Node *n) {
   	Language::destructorHandler(n);
   	String *symname = Getattr(n, "sym:name");
-  	Printv(destrcutor_call, Swig_name_wrapper(Swig_name_destroy(getNSpace(), symname)), "((void*)swigCPtr)", NIL);
+  	Printv(destrcutor_call, Swig_name_wrapper(Swig_name_destroy(getNSpace(), symname)), "((void*)self.swigCPtr)", NIL);
   	return SWIG_OK;
   }
 
@@ -917,7 +934,7 @@ public:
   /* Helper functions */
   bool substituteClassname(String *tm, SwigType *pt);
   void substituteClassnameVariable(String *tm, const char *classnamevariable, SwigType *type);
-  bool skipIgnoredArgs(Parm *p);
+  bool skipIgnoredArgs(Parm **p);
   void marshalInputArgs(ParmList *parmlist, Wrapper *wrapper);
   void makeParameterList(ParmList *parmlist, Wrapper *wrapper);
   void marshalOutput(Node *n, String *actioncode, Wrapper *wrapper);
@@ -996,8 +1013,8 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
   
   emit_mark_varargs(parmlist);
 
-  for (p = parmlist; p; p = nextSibling(p), i++) {
-    if(skipIgnoredArgs(p))
+  for (p = parmlist; p; i++) {
+    if(skipIgnoredArgs(&p))
       continue;
     
     SwigType *pt = Getattr(p, "type");
@@ -1031,6 +1048,8 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
       Printf(function_decl, ", ");
     gencomma = 2;
     Printf(function_decl, "%s %s", objcparmtype, arg);
+    
+    p = Getattr(p, "tmap:in:next");
 
     Delete(arg);
     Delete(objcparmtype);
@@ -1057,16 +1076,8 @@ void OBJECTIVEC::emitProxyGlobalFunctions(Node *n) {
 
   Printf(function_defn, "  %s\n}\n", tm ? (const String *) tm : empty_string);
 
-  /* Write the function declaration to the proxy_h_code 
-     and function definition to the proxy_mm_code */
-//   if ((member_func_flag || member_constant_flag || Cmp(storage, "friend") == 0 || Cmp(storage, "typedef") == 0)) {
   Printv(proxy_global_function_decls, function_decl, "\n", NIL);
   Printv(proxy_global_function_defns, function_defn, "\n", NIL);
-//   }
-//   else {
-//     Printv(proxy_h_code, function_decl, "\n", NIL);
-//     Printv(proxy_mm_code, function_defn, "\n", NIL);
-//   }
 
   //Delete(paramstring);
   Delete(ccasesymname);
@@ -1151,8 +1162,8 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
   
   emit_mark_varargs(parmlist);
 
-  for (p = parmlist; p; p = nextSibling(p), i++) {
-    if(skipIgnoredArgs(p))
+  for (p = parmlist; p;/* p = nextSibling(p),*/ i++) {
+    if(skipIgnoredArgs(&p))
       continue;
     
     SwigType *pt = Getattr(p, "type");
@@ -1202,6 +1213,8 @@ void OBJECTIVEC::emitProxyClassFunction(Node *n) {
 	}
 		
     gencomma++;
+    
+    p = Getattr(p, "tmap:in:next");
     
     Delete(objcparmname);
     Delete(objcparmtype);
@@ -1282,8 +1295,8 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
   
   emit_mark_varargs(parmlist);
 
-  for (p = parmlist; p; p = nextSibling(p), i++) {
-    if(skipIgnoredArgs(p))
+  for (p = parmlist; p; i++) {
+    if(skipIgnoredArgs(&p))
       continue;
     
     SwigType *pt = Getattr(p, "type");
@@ -1326,9 +1339,10 @@ void OBJECTIVEC::emitProxyClassConstructor(Node *n) {
     
     gencomma++;
     
+    p = Getattr(p, "tmap:in:next");
+    
     Delete(objcparmname);
     Delete(objcparmtype);
-
   }
 
   // Deal with overloading  
@@ -1678,16 +1692,16 @@ void OBJECTIVEC::substituteClassnameVariable(String *tm, const char *classnameva
  * skipIgnoredArgs()
  *
  * --------------------------------------------------------------------- */
-bool OBJECTIVEC::skipIgnoredArgs(Parm *p) {
+bool OBJECTIVEC::skipIgnoredArgs(Parm **p) {
   /* Ignored varargs */
-  if (checkAttribute(p, "varargs:ignore", "1")) {
-    p = nextSibling(p);
+  if (checkAttribute(*p, "varargs:ignore", "1")) {
+    *p = nextSibling(*p);
 	return true;
   }
 
   /* Ignored parameters */
-  if (checkAttribute(p, "tmap:in:numinputs", "0")) {
-    p = Getattr(p, "tmap:in:next");
+  if (checkAttribute(*p, "tmap:in:numinputs", "0")) {
+    *p = Getattr(*p, "tmap:in:next");
 	return true;
   }
   return false;
@@ -1705,11 +1719,9 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
   Parm *p;
   int i = 0;
 
-  for (p = parmlist; p; p = nextSibling(p), i++) {
-	if(skipIgnoredArgs(p))
+  for (p = parmlist; p; i++) {
+	if(skipIgnoredArgs(&p))
       continue;
-      
-//     SwigType *pt = Getattr(p, "type");
     
     String *arg = NewStringEmpty();
     Printf(arg, "imarg%d", i + 1);
@@ -1720,10 +1732,8 @@ void OBJECTIVEC::marshalInputArgs(ParmList *parmlist, Wrapper *wrapper) {
       Setattr(p, "emit:input", arg);
       Printf(wrapper->code, "%s\n", tm);
     } 
-//     else {
-//       Swig_warning(WARN_TYPEMAP_IN_UNDEF, input_file, line_number, "Unable to use type %s as a function argument.\n", SwigType_str(pt, 0));
-//       p = nextSibling(p);
-//     }
+    
+    p = Getattr(p, "tmap:in:next");
     
     Delete(arg);
   }
@@ -1751,8 +1761,8 @@ void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
   int i = 0;
   int gencomma = 0;
 
-  for (p = parmlist; p; p = nextSibling(p), i++) {
-    if(skipIgnoredArgs(p))
+  for (p = parmlist; p; i++) {
+    if(skipIgnoredArgs(&p))
       continue;
     
     SwigType *pt = Getattr(p, "type");
@@ -1772,6 +1782,8 @@ void OBJECTIVEC::makeParameterList(ParmList *parmlist, Wrapper *wrapper) {
     } else
       Swig_warning(WARN_OBJC_TYPEMAP_IMTYPE_UNDEF, input_file, line_number, "No imtype typemap defined for %s\n", SwigType_str(pt, 0));
 
+    p = Getattr(p, "tmap:in:next");
+    
     Delete(imparmtype);
     Delete(arg);
   }
