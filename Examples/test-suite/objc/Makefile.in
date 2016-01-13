@@ -10,37 +10,54 @@ OBJCFLAGS    = @OBJCCFLAGS@
 OBJCINCLUDES = @OBJCINC@ 
 OBJCLIBS     = @OBJCLIBS@
 srcdir       = @srcdir@
-top_srcdir   = @top_srcdir@
-top_builddir = @top_builddir@
+top_srcdir   = ../@top_srcdir@
+top_builddir = ../@top_builddir@
 
 include $(srcdir)/../common.mk
+
+# Overridden variables here
+SRCDIR       = ../$(srcdir)/
+OBJC_TARGET = $*
 
 # Rules for the different types of tests
 %.cpptest:
 	$(setup)
-	+$(swig_and_compile_cpp)
+	+(cd $(OBJC_TARGET) && $(swig_and_compile_cpp))
 	$(run_testcase)
 
 %.ctest:
 	$(setup)
-	+$(swig_and_compile_c)
+	+(cd $(OBJC_TARGET) && $(swig_and_compile_c))
 	$(run_testcase)
 
 %.multicpptest:
 	$(setup)
-	+$(swig_and_compile_multi_cpp)
+	+(cd $(OBJC_TARGET) && $(swig_and_compile_multi_cpp))
 	$(run_testcase)
+	
+# Makes a directory for the testcase if it does not exist
+setup = \
+	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then	  \
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $* (with run test)" ; \
+	else								  \
+	  echo "$(ACTION)ing $(LANGUAGE) testcase $*" ;			  \
+	fi;								  \
+	if [ ! -d $(OBJC_TARGET) ]; then						  \
+	  mkdir $(OBJC_TARGET);							  \
+	fi
 
 # Compiles Objective-C files then runs the testcase. A testcase is only run if
 # a file is found which has _runme.m appended after the testcase name.
 run_testcase = \
 	if [ -f $(SCRIPTDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) ]; then \
-	  $(COMPILETOOL) $(CXX) -I. $(INCLUDES) $(OBJCINCLUDES) $(OBJCFLAGS) $(OBJCXXFLAGS) $(srcdir)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) $(OBJCLIBS) -L. -l$* -o $*_runme && \
+	  cd $(OBJC_TARGET) && $(COMPILETOOL) $(CXX) -I. $(INCLUDES) $(OBJCINCLUDES) $(OBJCFLAGS) $(OBJCXXFLAGS) $(SRCDIR)/$(SCRIPTPREFIX)$*$(SCRIPTSUFFIX) $(OBJCLIBS) -L. -l$* -o $*_runme && \
        	  env LD_LIBRARY_PATH=.:$$LD_LIBRARY_PATH $(RUNTOOL) ./$*_runme; \
 	fi
 
 # Cleans the testcase
 %.clean:
-	@rm -f $*_wrap.* $*_proxy.* $*_runme
+	@if [ -d $(OBJC_TARGET) ]; then \
+	  rm -rf $(OBJC_TARGET); \
+	fi
 clean:
 	$(MAKE) -f $(top_builddir)/$(EXAMPLES)/Makefile objc_clean

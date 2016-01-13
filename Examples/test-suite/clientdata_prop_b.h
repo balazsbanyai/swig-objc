@@ -1,3 +1,6 @@
+#ifndef CLIENTDATA_PROP_B_H
+#define CLIENTDATA_PROP_B_H
+
 #include "clientdata_prop_a.h"
 
 typedef tA t2A;
@@ -36,3 +39,5 @@ t2A *new_t2A() { return new t2A(); }
 t3A *new_t3A() { return new t3A(); }
 tD * new_tD () { return new tD (); }
 t2D *new_t2D() { return new t2D(); }
+
+#endif
