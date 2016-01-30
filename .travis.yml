@@ -1,7 +1,7 @@
 language: cpp
 matrix:
   include:
-    #- compiler: clang
+#    - compiler: clang
 #      os: linux
 #      env: SWIGLANG=
 #    - compiler: gcc
@@ -154,20 +154,12 @@ matrix:
     - compiler: gcc
       os: osx
       env: SWIGLANG=objc
-      
-#  allow_failures:
+
+  allow_failures:
 #    # Lots of failing tests currently
 #    - compiler: gcc
 #      os: linux
 #      env: SWIGLANG=ocaml
-#    # Occasional gcc internal compiler error
-#    - compiler: gcc
-#      os: linux
-#      env: SWIGLANG=octave SWIGJOBS=-j2 VER=3.8
-#    # Occasional gcc internal compiler error
-#    - compiler: gcc
-#      os: linux
-#      env: SWIGLANG=octave SWIGJOBS=-j2 VER=4.0
 #    # Not quite working yet
 #    - compiler: gcc
 #      os: linux
@@ -176,16 +168,6 @@ matrix:
 #    - compiler: gcc
 #      os: linux
 #      env: SWIGLANG=python SWIG_FEATURES=-O
-#    - compiler: gcc
-#      os: linux
-#      env: SWIGLANG=objc
-#    - compiler: clang
-#      os: osx
-#      env: SWIGLANG=go
-#    # Failing tests currently
-#    - compiler: gcc
-#      os: osx
-#      env: SWIGLANG=objc
 before_install:
   - date -u
   - uname -a
