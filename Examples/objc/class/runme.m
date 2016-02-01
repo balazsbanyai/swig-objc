@@ -2,8 +2,11 @@
 #import "example_proxy.h"
 
 int main(int argc, char* argv[]) {
+    
+#if !__has_feature(objc_arc)
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
+#endif
+    
     // ----- Object creation -----
     NSLog(@"Creating some objects:" );
     Circle *c = [[Circle alloc] initWithR: 10];
@@ -15,13 +18,11 @@ int main(int argc, char* argv[]) {
     // ----- Access a static member -----
     NSLog(@"\nA total of %d shapes were created", [Shape getNshapes]);
 
-
     // ----- Member data access -----
     // Notice how we can do this using functions specific to
     // the 'Circle' class.
     [c setX: 20];
     [c setY: 30];
-
 
     // Now use the same functions in the base class
     Shape *shape = s;
@@ -49,16 +50,17 @@ int main(int argc, char* argv[]) {
         NSLog(@"area      = %f", [obj area]);
         NSLog(@"perimeter = %f", [obj perimeter]);
     }
+    NSLog(@"%d shapes remain", [Shape getNshapes]);
 
     // ----- Delete everything -----
     // Note: this invokes the virtual destructor
     // You could leave this to the garbage collector
+#if !__has_feature(objc_arc)
     [c release];
     [s release];
-    NSLog(@"%d shapes remain", [Shape getNshapes]);
-
     [shapes release];
     [pool release];
+#endif
    return 0;
  }
 
