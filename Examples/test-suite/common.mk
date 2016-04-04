@@ -264,9 +264,9 @@ CPP_TEST_CASES += \
 	li_boost_shared_ptr_bits \
 	li_boost_shared_ptr_template \
 	li_boost_shared_ptr_attribute \
-	li_carrays \
-	li_cdata \
-	li_cpointer \
+	li_carrays_cpp \
+	li_cdata_cpp \
+	li_cpointer_cpp \
 	li_std_auto_ptr \
 	li_stdint \
 	li_swigtype_inout \
@@ -282,6 +282,10 @@ CPP_TEST_CASES += \
 	minherit2 \
 	mixed_types \
 	multiple_inheritance \
+	multiple_inheritance_abstract \
+	multiple_inheritance_interfaces \
+	multiple_inheritance_nspace \
+	multiple_inheritance_shared_ptr \
 	name_cxx \
 	name_warnings \
 	namespace_class \
@@ -341,6 +345,7 @@ CPP_TEST_CASES += \
 	rename2 \
 	rename3 \
 	rename4 \
+	rename_rstrip_encoder \
 	rename_scope \
 	rename_simple \
 	rename_strip_encoder \
@@ -379,6 +384,7 @@ CPP_TEST_CASES += \
 	static_array_member \
 	static_const_member \
 	static_const_member_2 \
+	string_constants \
 	struct_initialization_cpp \
 	struct_value \
 	symbol_clash \
@@ -471,7 +477,7 @@ CPP_TEST_CASES += \
 	typedef_reference \
 	typedef_scope \
 	typedef_sizet \
-	typedef_struct \
+	typedef_struct_cpp \
 	typedef_typedef \
 	typemap_arrays \
 	typemap_array_qualifiers \
@@ -578,7 +584,6 @@ CPP_STD_TEST_CASES += \
 	li_std_vector \
 	li_std_vector_enum \
 	li_std_vector_member_var\
-	naturalvar \
 	smart_pointer_inherit \
 	template_typedef_fnc \
 	template_type_namespace \
@@ -603,7 +608,7 @@ C_TEST_CASES += \
 	char_constant \
 	const_const \
 	constant_expr \
-	empty \
+	empty_c \
 	enums \
 	enum_forward \
 	enum_macro \
@@ -616,7 +621,7 @@ C_TEST_CASES += \
 	inctest \
 	infinity \
 	integers \
-	keyword_rename \
+	keyword_rename_c \
 	lextype \
 	li_carrays \
 	li_cdata \
@@ -631,8 +636,8 @@ C_TEST_CASES += \
 	nested_extend_c \
 	nested_structs \
 	newobject2 \
-	overload_extend \
-	overload_extendc \
+	overload_extend_c \
+	overload_extend2 \
 	preproc \
 	preproc_constants_c \
 	preproc_defined \

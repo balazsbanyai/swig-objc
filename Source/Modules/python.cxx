@@ -897,32 +897,23 @@ public:
 	        "\n", "def _swig_setattr(self, class_type, name, value):\n", tab4, "return _swig_setattr_nondynamic(self, class_type, name, value, 0)\n\n", NIL);
 
 	Printv(f_shadow,
-	       "\n", "def _swig_getattr_nondynamic(self, class_type, name, static=1):\n",
+	       "\n", "def _swig_getattr(self, class_type, name):\n",
 	       tab4, "if (name == \"thisown\"):\n", tab8, "return self.this.own()\n",
 	       tab4, "method = class_type.__swig_getmethods__.get(name, None)\n",
 	       tab4, "if method:\n", tab8, "return method(self)\n",
-	       tab4, "if (not static):\n",
-	       tab4, tab4, "return object.__getattr__(self, name)\n",
-	       tab4, "else:\n",
-	       tab4, tab4, "raise AttributeError(name)\n\n",
-	       "def _swig_getattr(self, class_type, name):\n", tab4, "return _swig_getattr_nondynamic(self, class_type, name, 0)\n\n", NIL);
+	       tab4, "raise AttributeError(\"'%s' object has no attribute '%s'\" % (class_type.__name__, name))\n\n", NIL);
 
 	Printv(f_shadow,
 	        "\n", "def _swig_repr(self):\n",
 	       tab4, "try:\n", tab8, "strthis = \"proxy of \" + self.this.__repr__()\n",
 	       tab4, "except __builtin__.Exception:\n", tab8, "strthis = \"\"\n", tab4, "return \"<%s.%s; %s >\" % (self.__class__.__module__, self.__class__.__name__, strthis,)\n\n", NIL);
 
-	if (!classic) {
-	  /* Usage of types.ObjectType is deprecated.
-	   * But don't sure wether this would broken old Python?
-	   */
+	if (!classic && !modern) {
 	  Printv(f_shadow,
-//               "import types\n",
 		 "try:\n",
-//               "    _object = types.ObjectType\n",
-		 tab4, "_object = object\n", tab4, "_newclass = 1\n", "except AttributeError:\n", tab4, "class _object:\n", tab8, "pass\n", tab4, "_newclass = 0\n",
-//                 "del types\n", 
-		 "\n\n", NIL);
+		 tab4, "_object = object\n", tab4, "_newclass = 1\n",
+		 "except __builtin__.Exception:\n",
+		 tab4, "class _object:\n", tab8, "pass\n", tab4, "_newclass = 0\n\n", NIL);
 	}
       }
       if (modern) {
@@ -1007,7 +998,7 @@ public:
 
     if (shadow) {
       Swig_banner_target_lang(f_shadow_py, "#");
-      if (!modern) {
+      if (!modern && !classic) {
 	Printv(f_shadow, "# This file is compatible with both classic and new-style classes.\n", NIL);
       }
       Printv(f_shadow_py, "\n", f_shadow_begin, "\n", NIL);
@@ -2733,7 +2724,8 @@ public:
     int noargs = funpack && (tuple_required == 0 && tuple_arguments == 0);
     int onearg = funpack && (tuple_required == 1 && tuple_arguments == 1);
 
-    if (builtin && funpack && !overname && !builtin_ctor && !GetFlag(n, "feature:compactdefaultargs")) {
+    if (builtin && funpack && !overname && !builtin_ctor && 
+      !(GetFlag(n, "feature:compactdefaultargs") && (tuple_arguments > tuple_required || varargs))) {
       String *argattr = NewStringf("%d", tuple_arguments);
       Setattr(n, "python:argcount", argattr);
       Delete(argattr);
@@ -3459,6 +3451,28 @@ public:
    * constantWrapper()
    * ------------------------------------------------------------ */
 
+  /* Determine if the node requires the _swigconstant code to be generated */
+  bool needs_swigconstant(Node* n) {
+    SwigType *type = Getattr(n, "type");
+    SwigType *qtype = SwigType_typedef_resolve_all(type);
+    SwigType *uqtype = SwigType_strip_qualifiers(qtype);
+    bool result = false;
+
+    /* Note, that we need special handling for function pointers, as
+     * SwigType_base(fptr) does not return the underlying pointer-to-function
+     * type but the return-type of function. */
+    if(!SwigType_isfunction(uqtype) && !SwigType_isfunctionpointer(uqtype)) {
+      SwigType *basetype = SwigType_base(uqtype);
+      result = (bool)SwigType_isclass(basetype);
+      Delete(basetype);
+    }
+
+    Delete(qtype);
+    Delete(uqtype);
+
+    return result;
+  }
+
   virtual int constantWrapper(Node *n) {
     String *name = Getattr(n, "name");
     String *iname = Getattr(n, "sym:name");
@@ -3501,8 +3515,15 @@ public:
       Replaceall(tm, "$source", value);
       Replaceall(tm, "$target", name);
       Replaceall(tm, "$value", value);
-      if (!builtin && (shadow) && (!(shadow & PYSHADOW_MEMBER)) && (!in_class || !Getattr(n, "feature:python:callback"))) {
-        // Generate method which registers the new constant
+      if (needs_swigconstant(n) && !builtin && (shadow) && (!(shadow & PYSHADOW_MEMBER)) && (!in_class || !Getattr(n, "feature:python:callback"))) {
+	// Generate `*_swigconstant()` method which registers the new constant.
+	//
+	// *_swigconstant methods are required for constants of class type.
+	// Class types are registered in shadow file (see *_swigregister). The
+	// instances of class must be created (registered) after the type is
+	// registered, so we can't let SWIG_init() to register constants of
+	// class type (the SWIG_init() is called before shadow classes are
+	// defined and registered).
         Printf(f_wrappers, "SWIGINTERN PyObject *%s_swigconstant(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {\n", iname);
         Printf(f_wrappers, tab2 "PyObject *module;\n", tm);
         Printf(f_wrappers, tab2 "PyObject *d;\n");
@@ -3542,13 +3563,17 @@ public:
 
     if (!builtin && (shadow) && (!(shadow & PYSHADOW_MEMBER))) {
       if (!in_class) {
-	Printv(f_shadow, "\n",NIL);
-	Printv(f_shadow, module, ".", iname, "_swigconstant(",module,")\n", NIL);
+	if(needs_swigconstant(n)) {
+	  Printv(f_shadow, "\n",NIL);
+	  Printv(f_shadow, module, ".", iname, "_swigconstant(",module,")\n", NIL);
+	}
 	Printv(f_shadow, iname, " = ", module, ".", iname, "\n", NIL);
       } else {
 	if (!(Getattr(n, "feature:python:callback"))) {
-	  Printv(f_shadow_stubs, "\n",NIL);
-	  Printv(f_shadow_stubs, module, ".", iname, "_swigconstant(", module, ")\n", NIL);
+	  if(needs_swigconstant(n)) {
+	    Printv(f_shadow_stubs, "\n",NIL);
+	    Printv(f_shadow_stubs, module, ".", iname, "_swigconstant(", module, ")\n", NIL);
+	  }
 	  Printv(f_shadow_stubs, iname, " = ", module, ".", iname, "\n", NIL);
 	}
       }
@@ -4710,7 +4735,7 @@ public:
     }
 
     if (shadow) {
-      if (!classic && !Getattr(n, "feature:python:callback") && have_addtofunc(n)) {
+      if (!Getattr(n, "feature:python:callback") && have_addtofunc(n)) {
 	int kw = (check_kwargs(n) && !Getattr(n, "sym:overloaded")) ? 1 : 0;
 	String *parms = make_pyParmList(n, false, false, kw);
 	String *callParms = make_pyParmList(n, false, true, kw);
@@ -4726,24 +4751,18 @@ public:
 	} else {
 	  Printv(f_shadow, tab8, "return ", funcCall(Swig_name_member(NSPACE_TODO, class_name, symname), callParms), "\n\n", NIL);
 	}
-	if (!modern)
-	  Printv(f_shadow, tab4, "if _newclass:\n", tab4, NIL);
 	Printv(f_shadow, tab4, symname, " = staticmethod(", symname, ")\n", NIL);
-
-	if (!modern) {
-	  Printv(f_shadow, tab4, "__swig_getmethods__[\"", symname, "\"] = lambda x: ", symname, "\n", NIL);
-	}
-
       } else {
-	if (!modern) {
-	  Printv(f_shadow, tab4, "__swig_getmethods__[\"", symname, "\"] = lambda x: ", module, ".", Swig_name_member(NSPACE_TODO, class_name, symname), "\n",
-		 NIL);
-	}
 	if (!classic) {
 	  if (!modern)
 	    Printv(f_shadow, tab4, "if _newclass:\n", tab4, NIL);
 	  Printv(f_shadow, tab4, symname, " = staticmethod(", module, ".", Swig_name_member(NSPACE_TODO, class_name, symname),
 		 ")\n", NIL);
+	}
+	if (classic || !modern) {
+	  if (!classic)
+	    Printv(f_shadow, tab4, "else:\n", tab4, NIL);
+	  Printv(f_shadow, tab4, symname, " = ", module, ".", Swig_name_member(NSPACE_TODO, class_name, symname), "\n", NIL);
 	}
       }
     }
