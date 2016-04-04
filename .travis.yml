@@ -1,16 +1,16 @@
 language: cpp
 matrix:
   include:
-#    - compiler: clang
-#      os: linux
-#      env: SWIGLANG=
-#    - compiler: gcc
-#      os: linux
-#      env: SWIGLANG=
-#    - os: linux
-#      env: SWIGLANG= SWIG_CC=gcc-5 SWIG_CXX=g++-5 CPP11=1
-#    - os: linux
-#      env: SWIGLANG= SWIG_CC=gcc-5 SWIG_CXX=g++-5 CPP14=1
+   - compiler: clang
+     os: linux
+     env: SWIGLANG=
+   - compiler: gcc
+     os: linux
+     env: SWIGLANG=
+   - os: linux
+     env: SWIGLANG= SWIG_CC=gcc-5 SWIG_CXX=g++-5 CPP11=1
+   - os: linux
+     env: SWIGLANG= SWIG_CC=gcc-5 SWIG_CXX=g++-5 CPP14=1
 #    - compiler: gcc
 #      os: linux
 #      env: SWIGLANG=csharp
@@ -100,6 +100,9 @@ matrix:
 #      env: SWIGLANG=ruby
 #    - compiler: gcc
 #      os: linux
+#      env: SWIGLANG=ruby VER=2.3.0
+#    - compiler: gcc
+#      os: linux
 #      env: SWIGLANG=scilab
 #    - compiler: gcc
 #      os: linux
@@ -113,12 +116,12 @@ matrix:
     - compiler: gcc
       os: linux
       env: SWIGLANG=objc
-#    - os: osx
-#      env: SWIGLANG= SWIG_CC=gcc-4.2 SWIG_CXX=g++-4.2
-#    - compiler: clang
-#      os: osx
-#      env: SWIGLANG=
-#    - compiler: clang
+    - os: osx
+      env: SWIGLANG= SWIG_CC=gcc-4.2 SWIG_CXX=g++-4.2
+    - compiler: clang
+      os: osx
+      env: SWIGLANG=
+    #- compiler: clang
 #      os: osx
 #      env: SWIGLANG=csharp
 #    - compiler: clang
@@ -156,15 +159,11 @@ matrix:
       env: SWIGLANG=objc
 
   allow_failures:
-#    # Lots of failing tests currently
+    # Lots of failing tests currently
 #    - compiler: gcc
 #      os: linux
 #      env: SWIGLANG=ocaml
-#    # Not quite working yet
-#    - compiler: gcc
-#      os: linux
-#      env: SWIGLANG=python SWIG_FEATURES=-classic
-#    # Not quite working yet
+    # Not quite working yet
 #    - compiler: gcc
 #      os: linux
 #      env: SWIGLANG=python SWIG_FEATURES=-O
@@ -187,7 +186,7 @@ install:
   - $CXX --version
 script:
   - echo 'Configuring...' && echo -en 'travis_fold:start:script.1\\r'
-  - if test -n "$SWIGLANG"; then CONFIGOPTS+=(--without-alllang --with-$SWIGLANG$PY3); fi
+  - if test -n "$SWIGLANG"; then CONFIGOPTS+=(--without-alllang --with-$WITHLANG); fi
   - echo "${CONFIGOPTS[@]}"
   - ./autogen.sh && mkdir -p build/build && cd build/build && ../../configure "${CONFIGOPTS[@]}"
   - echo -en 'travis_fold:end:script.1\\r'

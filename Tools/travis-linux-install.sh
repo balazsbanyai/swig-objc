@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e # exit on failure
+
 lsb_release -a
 sudo apt-get -qq update
 
@@ -10,6 +13,8 @@ if [[ "$CC" == gcc-5 ]]; then
 else
 	sudo apt-get -qq install libboost-dev
 fi
+
+WITHLANG=$SWIGLANG
 
 case "$SWIGLANG" in
 	"")     ;;
@@ -75,15 +80,21 @@ case "$SWIGLANG" in
 		if [[ "$PY3" ]]; then
 			sudo apt-get install -qq python3-dev
 		fi
+		WITHLANG=$SWIGLANG$PY3
 		if [[ "$VER" ]]; then
 			sudo add-apt-repository -y ppa:fkrull/deadsnakes
 			sudo apt-get -qq update
 			sudo apt-get -qq install python${VER}-dev
-			CONFIGOPTS+=("--with-python${PY3}=python${VER}");
+			WITHLANG=$SWIGLANG$PY3=$SWIGLANG$VER
 		fi
 		;;
 	"r")
 		sudo apt-get -qq install r-base
+		;;
+	"ruby")
+		if [[ "$VER" ]]; then
+			rvm install $VER
+		fi
 		;;
 	"scilab")
 		sudo apt-get -qq install scilab

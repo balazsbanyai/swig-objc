@@ -2712,6 +2712,9 @@ private:
    * ---------------------------------------------------------------------- */
 
   virtual int enumDeclaration(Node *n) {
+    if (getCurrentClass() && (cplus_mode != PUBLIC))
+      return SWIG_NOWRAP;
+
     String *name = goEnumName(n);
     if (Strcmp(name, "int") != 0) {
       if (!ImportMode || !imported_package) {
@@ -2792,6 +2795,7 @@ private:
     } else if (SwigType_type(type) == T_CHAR) {
       quote = '\'';
     } else if (SwigType_type(type) == T_STRING) {
+      Printv(get, "(char *)", NULL);
       quote = '"';
     } else {
       quote = '\0';

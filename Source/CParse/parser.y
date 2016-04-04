@@ -2926,6 +2926,14 @@ c_decl  : storage_class type declarator initializer c_decl_tail {
 	      Setattr($$,"throws",$4.throws);
 	      Setattr($$,"throw",$4.throwf);
 	      Setattr($$,"noexcept",$4.nexcept);
+	      if ($4.val && $4.type) {
+		/* store initializer type as it might be different to the declared type */
+		SwigType *valuetype = NewSwigType($4.type);
+		if (Len(valuetype) > 0)
+		  Setattr($$,"valuetype",valuetype);
+		else
+		  Delete(valuetype);
+	      }
 	      if (!$5) {
 		if (Len(scanner_ccode)) {
 		  String *code = Copy(scanner_ccode);
@@ -6131,11 +6139,11 @@ exprcompound   : expr PLUS expr {
 	       }
 /* Sadly this causes 2 reduce-reduce conflicts with templates.  FIXME resolve these.
                | expr GREATERTHAN expr {
-		 $$.val = NewStringf("%s < %s", $1.val, $3.val);
+		 $$.val = NewStringf("%s > %s", $1.val, $3.val);
 		 $$.type = cparse_cplusplus ? T_BOOL : T_INT;
 	       }
                | expr LESSTHAN expr {
-		 $$.val = NewStringf("%s > %s", $1.val, $3.val);
+		 $$.val = NewStringf("%s < %s", $1.val, $3.val);
 		 $$.type = cparse_cplusplus ? T_BOOL : T_INT;
 	       }
 */
