@@ -1,1 +1,1 @@
-add_subdirectory ( test-suite )
+#add_subdirectory ( test-suite )
