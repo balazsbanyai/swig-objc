@@ -6,11 +6,21 @@
 #include "config.h"
 #else
 #include <sys/locking.h>
+#if 1
+#include "config.h" /* WARNING THIS MIGHT BREAK WINDOWS BUILD WITHOUT CMAKE */
+#else
 #define PACKAGE_NAME "ccache-swig.exe"
+#include "config_win32.h"
+#endif
 #endif
 
 #include <stdio.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#else
+#include "getopt.h"
+#endif
+
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -20,19 +30,44 @@
  #include <sys/wait.h>
  #include <sys/mman.h>
 #else
-#define _WIN32_WINNT 0x0500
+#ifndef _WIN32_WINNT
+ #define _WIN32_WINNT 0x0500
+#endif
  #include <windows.h>
  #include <shlobj.h>
 #endif
 
+#ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>
+#elif defined(_WIN32)
+#include <io.h>
+#define open _open
+#define close _close
+#define dup _dup
+#include <direct.h>
+#define getcwd _getcwd
+#define mkdir _mkdir
+#include <process.h>
+#define getpid _getpid
+#define mode_t int
+#endif
+
 #include <fcntl.h>
 #include <time.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef HAVE_UTIME_H
 #include <utime.h>
+#elif defined (_WIN32)
+#include <sys/utime.h>
+#define utime _utime
+#endif
 #include <stdarg.h>
+#ifdef HAVE_DIRENT_H
 #include <dirent.h>
+#else
+#include "dirent.h"
+#endif
 #include <limits.h>
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -45,11 +80,20 @@
 #include <zlib.h>
 #endif
 
+/* work-arounds from curl */
+#if !defined(S_ISREG) && defined(S_IFMT) && defined(S_IFREG)
+#define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#endif
+#if !defined(S_ISDIR) && defined(S_IFMT) && defined(S_IFDIR)
+#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#endif
+
+
 #define STATUS_NOTFOUND 3
 #define STATUS_FATAL 4
 #define STATUS_NOCACHE 5
 
-#define MYNAME PACKAGE_NAME
+#define MYNAME PROGRAM_NAME
 
 #define LIMIT_MULTIPLE 0.8
 

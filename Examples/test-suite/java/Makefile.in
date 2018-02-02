@@ -5,7 +5,7 @@
 LANGUAGE     = java
 JAVA         = @JAVA@
 JAVAC        = @JAVAC@
-JAVAFLAGS    = -Xcheck:jni
+JAVAFLAGS    = @JAVAFLAGS@
 SCRIPTSUFFIX = _runme.java
 
 srcdir       = @srcdir@
@@ -28,6 +28,7 @@ CPP_TEST_CASES = \
 	java_director_exception_feature \
 	java_director_exception_feature_nspace \
 	java_director_ptrclass \
+	java_director_typemaps \
 	java_enums \
 	java_jnitypes \
 	java_lib_arrays_dimensionless \
@@ -39,6 +40,7 @@ CPP_TEST_CASES = \
 	java_throws \
 	java_typemaps_proxy \
 	java_typemaps_typewrapper \
+	li_std_list \
 #	li_boost_intrusive_ptr
 
 CPP11_TEST_CASES = \
